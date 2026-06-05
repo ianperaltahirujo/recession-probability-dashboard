@@ -2,11 +2,9 @@ import streamlit as st
 import pandas as pd
 import json
 import os
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-from datetime import datetime
 import subprocess
 import sys
+import altair as alt
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -15,38 +13,110 @@ st.set_page_config(
     layout="wide"
 )
 
+# --- Linear.app inspired styling ---
+st.markdown("""
+<style>
+    /* Base background */
+    .stApp {
+        background-color: #0f0f13;
+    }
+
+    /* Sidebar and main content area */
+    section[data-testid="stSidebar"] {
+        background-color: #0f0f13;
+    }
+
+    /* Remove default Streamlit padding */
+    .block-container {
+        padding-top: 2rem;
+        padding-left: 3rem;
+        padding-right: 3rem;
+        max-width: 1400px;
+    }
+
+    /* Typography */
+    html, body, [class*="css"] {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        color: #e2e2e2;
+    }
+
+    /* Metric cards */
+    .linear-card {
+        background-color: #16161e;
+        border: 1px solid #2a2a35;
+        border-radius: 8px;
+        padding: 20px 24px;
+        margin-bottom: 8px;
+    }
+
+    .linear-card-label {
+        font-size: 11px;
+        font-weight: 500;
+        color: #6b6b7b;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 8px;
+    }
+
+    .linear-card-value {
+        font-size: 36px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        margin-bottom: 4px;
+        line-height: 1.1;
+    }
+
+    .linear-card-sub {
+        font-size: 12px;
+        color: #4a4a5a;
+        margin-top: 6px;
+    }
+
+    /* Section headers */
+    .linear-section-header {
+        font-size: 13px;
+        font-weight: 500;
+        color: #6b6b7b;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 12px;
+        margin-top: 32px;
+    }
+
+    /* Divider */
+    .linear-divider {
+        border: none;
+        border-top: 1px solid #1e1e28;
+        margin: 24px 0;
+    }
+
+    /* Hide Streamlit branding */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+
+    /* Dataframe styling */
+    .stDataFrame {
+        border: 1px solid #2a2a35;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # --- Pipeline Bootstrap ---
 def run_pipeline_if_needed():
-    """
-    On cold start, only fetch fresh data and score against
-    the pre-trained model. Never retrain on the server.
-    Training happens locally and model artifacts are committed to the repo.
-    """
     if not os.path.exists("data/processed/scores.csv"):
         st.info("Refreshing data, please wait...")
         os.makedirs("data/raw", exist_ok=True)
         os.makedirs("data/processed", exist_ok=True)
-        subprocess.run(
-            [sys.executable, "-m", "pipeline.fetch_data"],
-            check=True
-        )
-        subprocess.run(
-            [sys.executable, "-m", "pipeline.engineer_features"],
-            check=True
-        )
-        subprocess.run(
-            [sys.executable, "-m", "pipeline.score_current"],
-            check=True
-        )
+        subprocess.run([sys.executable, "-m", "pipeline.fetch_data"], check=True)
+        subprocess.run([sys.executable, "-m", "pipeline.engineer_features"], check=True)
+        subprocess.run([sys.executable, "-m", "pipeline.score_current"], check=True)
 
 # --- Load Data ---
 @st.cache_data(ttl=3600)
 def load_scores():
-    """
-    Cache the scores CSV for 1 hour (ttl=3600 seconds).
-    This prevents the dashboard from re-reading the file
-    on every single user interaction, which would be slow.
-    """
     df = pd.read_csv(
         "data/processed/scores.csv",
         index_col=0,
@@ -60,7 +130,7 @@ def load_snapshot():
         return json.load(f)
 
 @st.cache_data(ttl=3600)
-def load_raw():
+def load_features():
     df = pd.read_csv(
         "data/processed/features.csv",
         index_col=0,
@@ -70,91 +140,94 @@ def load_raw():
 
 # --- Helpers ---
 def risk_color(risk_level):
-    """Map risk tier to a display color."""
     colors = {
-        "Low":      "#2ecc71",
-        "Elevated": "#f39c12",
-        "High":     "#e67e22",
-        "Critical": "#e74c3c"
+        "Low":      "#4ade80",
+        "Elevated": "#fb923c",
+        "High":     "#f97316",
+        "Critical": "#ef4444"
     }
-    return colors.get(risk_level, "#95a5a6")
+    return colors.get(risk_level, "#6b6b7b")
+
+def risk_bg(risk_level):
+    colors = {
+        "Low":      "rgba(74, 222, 128, 0.08)",
+        "Elevated": "rgba(251, 146, 60, 0.08)",
+        "High":     "rgba(249, 115, 22, 0.08)",
+        "Critical": "rgba(239, 68, 68, 0.08)"
+    }
+    return colors.get(risk_level, "rgba(107, 107, 123, 0.08)")
 
 # --- Render Functions ---
-def render_header(snapshot):
-    st.title("U.S. Recession Probability Dashboard")
-    st.caption(
-        f"Powered by FRED macroeconomic data | "
-        f"Last updated: {snapshot['last_updated']} | "
-        f"Model: Gradient Boosting Classifier"
-    )
-    st.divider()
+def render_header():
+    st.markdown("""
+        <div style='margin-bottom: 8px;'>
+            <span style='font-size: 11px; font-weight: 500; color: #4a4a5a;
+                         text-transform: uppercase; letter-spacing: 0.08em;'>
+                MACROECONOMIC INTELLIGENCE
+            </span>
+        </div>
+        <h1 style='font-size: 28px; font-weight: 600; color: #e2e2e2;
+                   letter-spacing: -0.02em; margin: 0 0 4px 0;'>
+            U.S. Recession Probability
+        </h1>
+    """, unsafe_allow_html=True)
 
 def render_headline(snapshot):
-    """
-    Top row: three metric cards showing the headline
-    probability, risk tier, and data date.
-    """
-    col1, col2, col3 = st.columns(3)
-
     prob_pct = round(snapshot["recession_probability"] * 100, 2)
     risk = snapshot["risk_level"]
     color = risk_color(risk)
+    bg = risk_bg(risk)
+
+    col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-        st.markdown(
-            f"""
-            <div style='background-color:#1e1e2e; padding:24px;
-                        border-radius:12px; border-left: 5px solid {color};'>
-                <p style='color:#aaa; margin:0; font-size:14px;'>
-                    Current Recession Probability</p>
-                <p style='color:{color}; margin:0; font-size:48px;
-                           font-weight:bold;'>{prob_pct}%</p>
-                <p style='color:#aaa; margin:0; font-size:12px;'>
-                    As of {snapshot["date"]}</p>
+        st.markdown(f"""
+        <div class='linear-card' style='border-left: 2px solid {color};
+             background-color: {bg};'>
+            <div class='linear-card-label'>Current Probability</div>
+            <div class='linear-card-value' style='color: {color};'>
+                {prob_pct}%
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+            <div class='linear-card-sub'>As of {snapshot["date"]}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
     with col2:
-        st.markdown(
-            f"""
-            <div style='background-color:#1e1e2e; padding:24px;
-                        border-radius:12px; border-left: 5px solid {color};'>
-                <p style='color:#aaa; margin:0; font-size:14px;'>Risk Level</p>
-                <p style='color:{color}; margin:0; font-size:48px;
-                           font-weight:bold;'>{risk}</p>
-                <p style='color:#aaa; margin:0; font-size:12px;'>
-                    Based on model output thresholds</p>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+        st.markdown(f"""
+        <div class='linear-card' style='border-left: 2px solid {color};'>
+            <div class='linear-card-label'>Risk Level</div>
+            <div class='linear-card-value' style='color: {color};
+                 font-size: 28px;'>{risk}</div>
+            <div class='linear-card-sub'>Model output classification</div>
+        </div>
+        """, unsafe_allow_html=True)
 
     with col3:
-        st.markdown(
-            f"""
-            <div style='background-color:#1e1e2e; padding:24px;
-                        border-radius:12px; border-left: 5px solid #5b8dee;'>
-                <p style='color:#aaa; margin:0; font-size:14px;'>
-                    Data Coverage</p>
-                <p style='color:#5b8dee; margin:0; font-size:32px;
-                           font-weight:bold;'>1990-2026</p>
-                <p style='color:#aaa; margin:0; font-size:12px;'>
-                    7 FRED macroeconomic indicators</p>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+        st.markdown(f"""
+        <div class='linear-card' style='border-left: 2px solid #5b6af0;'>
+            <div class='linear-card-label'>Data Coverage</div>
+            <div class='linear-card-value' style='color: #8b95f5;
+                 font-size: 24px;'>1990 - 2026</div>
+            <div class='linear-card-sub'>421 months of FRED data</div>
+        </div>
+        """, unsafe_allow_html=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    with col4:
+        st.markdown(f"""
+        <div class='linear-card' style='border-left: 2px solid #5b6af0;'>
+            <div class='linear-card-label'>Model Performance</div>
+            <div class='linear-card-value' style='color: #8b95f5;
+                 font-size: 24px;'>0.9977</div>
+            <div class='linear-card-sub'>CV AUC-ROC | 5-fold time-series</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<div style='margin-top: 8px;'></div>", unsafe_allow_html=True)
 
 def render_probability_chart(scores_df):
-    import altair as alt
-
-    chart_df = scores_df.reset_index()
-    chart_df.columns = ["date", "probability"]
-    chart_df["probability_pct"] = chart_df["probability"] * 100
+    st.markdown("""
+        <div class='linear-section-header'>Probability Over Time</div>
+    """, unsafe_allow_html=True)
 
     recession_starts = pd.DataFrame({
         "date": [
@@ -166,62 +239,69 @@ def render_probability_chart(scores_df):
             pd.Timestamp("2009-06-01"),
             pd.Timestamp("2020-02-01"),
             pd.Timestamp("2020-04-01"),
-        ],
-        "label": [
-            "Recession Start", "Recession End",
-            "Recession Start", "Recession End",
-            "Recession Start", "Recession End",
-            "Recession Start", "Recession End",
         ]
     })
 
     rules = alt.Chart(recession_starts).mark_rule(
-        color="red",
-        opacity=0.4,
-        strokeWidth=1.5,
-        strokeDash=[4, 4],
+        color="#ef4444",
+        opacity=0.3,
+        strokeWidth=1,
+        strokeDash=[3, 3],
         clip=True
     ).encode(
         x=alt.X("date:T")
     )
 
+    chart_df = scores_df.reset_index()
+    chart_df.columns = ["date", "probability"]
+    chart_df["probability_pct"] = chart_df["probability"] * 100
+
     prob_line = alt.Chart(chart_df).mark_area(
-        line={"color": "#5b8dee", "strokeWidth": 2},
-        color="rgba(91,141,238,0.15)"
+        line={"color": "#8b95f5", "strokeWidth": 1.5},
+        color="rgba(91, 106, 240, 0.12)"
     ).encode(
-        x=alt.X("date:T", title="Date"),
+        x=alt.X("date:T", title=None,
+                axis=alt.Axis(labelColor="#4a4a5a", gridColor="#1e1e28",
+                              tickColor="#1e1e28")),
         y=alt.Y(
             "probability_pct:Q",
             title="Probability (%)",
             scale=alt.Scale(type="log", domain=[0.5, 105]),
-            axis=alt.Axis(values=[1, 10, 30, 60, 100])
+            axis=alt.Axis(
+                values=[1, 10, 30, 60, 100],
+                labelColor="#4a4a5a",
+                gridColor="#1e1e28",
+                tickColor="#1e1e28",
+                titleColor="#4a4a5a"
+            )
         ),
         tooltip=[
             alt.Tooltip("date:T", title="Date", format="%b %Y"),
-            alt.Tooltip("probability_pct:Q", title="Probability (%)", format=".2f")
+            alt.Tooltip("probability_pct:Q", title="Probability (%)",
+                        format=".2f")
         ]
     )
 
     chart = (rules + prob_line).properties(
-        height=400,
-        title="Recession Probability Over Time (1990-2026)"
+        height=340
     ).configure_view(
-        strokeWidth=0
+        strokeWidth=0,
+        fill="#16161e"
     ).configure_axis(
-        gridColor="#333333",
-        labelColor="#aaaaaa",
-        titleColor="#aaaaaa"
-    ).configure_title(
-        color="#ffffff"
+        domain=False
+    ).configure(
+        background="#16161e"
     )
 
     st.altair_chart(chart, use_container_width=True)
 
-def render_indicator_table(raw_df):
-    st.subheader("Current Indicator Readings")
+def render_indicator_table(features_df):
+    st.markdown("""
+        <div class='linear-section-header'>Current Indicator Readings</div>
+    """, unsafe_allow_html=True)
 
-    latest = raw_df.dropna(how="all").ffill().iloc[-1]
-    avg_12m = raw_df.tail(12).mean()
+    latest = features_df.dropna(how="all").ffill().iloc[-1]
+    avg_12m = features_df.tail(12).mean()
 
     indicators = {
         "yield_spread":   "Yield Curve Spread (10Y-2Y, %)",
@@ -239,52 +319,74 @@ def render_indicator_table(raw_df):
             current = latest[col]
             avg = avg_12m[col]
             delta = current - avg
+            trend = "+" + str(round(delta, 3)) if delta > 0 else str(round(delta, 3))
             rows.append({
                 "Indicator": label,
                 "Current": round(current, 3),
                 "12M Average": round(avg, 3),
-                "vs Average": round(delta, 3)
+                "vs Average": trend
             })
 
     table_df = pd.DataFrame(rows)
-    st.dataframe(table_df, use_container_width=True, hide_index=True)
+    st.dataframe(
+        table_df,
+        use_container_width=True,
+        hide_index=True,
+        height=280
+    )
 
-def render_methodology(snapshot):
-    st.divider()
-    with st.expander("Methodology & Model Details"):
-        st.markdown("""
-        **Model:** Gradient Boosting Classifier (scikit-learn)
-        - 200 estimators, learning rate 0.05, max depth 3
-        - Trained on 421 months of FRED data (1990-2026)
-        - Validated using 5-fold time-series cross validation
-        - **CV AUC-ROC: 0.9977** | **CV Brier Score: 0.1050**
+def render_methodology():
+    st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
+    with st.expander("Model & Methodology"):
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("""
+            **Model**
+            Gradient Boosting Classifier with isotonic calibration via
+            `CalibratedClassifierCV`. Trained on 421 months of FRED data
+            spanning 1990 to 2026, covering five recession cycles.
 
-        **Features (19 total):**
-        Yield curve spread and inversion flag, unemployment rate
-        with MoM/YoY changes, initial jobless claims with trend,
-        industrial production MoM/YoY, consumer sentiment,
-        BAA corporate bond spread, and nonfarm payroll changes.
+            **Validation**
+            5-fold time-series cross validation. Each fold trains on the past
+            and validates on the future, preventing data leakage.
+            CV AUC-ROC: 0.9977 | CV Brier Score: 0.0683
+            """)
+        with col2:
+            st.markdown("""
+            **Features (19 total)**
+            Yield curve spread and inversion flag, unemployment rate with
+            MoM/YoY changes, initial jobless claims trend, industrial
+            production MoM/YoY, consumer sentiment, BAA corporate bond
+            spread, and nonfarm payroll changes.
 
-        **Data Sources:** Federal Reserve Economic Data (FRED),
-        St. Louis Fed. Recession labels from NBER via USREC series.
+            **Data Sources**
+            Federal Reserve Economic Data (FRED), St. Louis Fed.
+            Recession labels from NBER via USREC series.
 
-        **Limitations:** This model is for educational and portfolio
-        purposes. It is not financial advice. Recession dating is
-        confirmed by NBER with significant lags, so near-term
-        readings should be interpreted with caution.
-        """)
+            **Limitations**
+            Educational and portfolio purposes only. Not financial advice.
+            """)
+
+def render_footer(snapshot):
+    st.markdown(f"""
+        <hr class='linear-divider'>
+        <div style='font-size: 11px; color: #4a4a5a; display: flex;
+                    justify-content: space-between;'>
+            <span>Last updated: {snapshot["last_updated"]}</span>
+            <span>Data: FRED API | Model: Gradient Boosting + Isotonic Calibration
+                  | Orchestration: Prefect</span>
+        </div>
+    """, unsafe_allow_html=True)
 
 # --- Main ---
-def main():
-    run_pipeline_if_needed()
-    scores_df = load_scores()
-    snapshot = load_snapshot()
-    raw_df = load_raw()
+run_pipeline_if_needed()
+scores_df = load_scores()
+snapshot = load_snapshot()
+features_df = load_features()
 
-    render_header(snapshot)
-    render_headline(snapshot)
-    render_probability_chart(scores_df)
-    render_indicator_table(raw_df)
-    render_methodology(snapshot)
-
-main()
+render_header()
+render_headline(snapshot)
+render_probability_chart(scores_df)
+render_indicator_table(features_df)
+render_methodology()
+render_footer(snapshot)
