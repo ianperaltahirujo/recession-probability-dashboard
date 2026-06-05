@@ -177,8 +177,6 @@ def render_probability_chart(scores_df):
     ).encode(
         x=alt.X("start:T"),
         x2="end:T",
-        y=alt.value(0),
-        y2=alt.value(450)
     )
 
     # Probability line
