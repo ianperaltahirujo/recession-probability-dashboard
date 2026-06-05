@@ -167,7 +167,7 @@ def render_probability_chart(scores_df):
     for i, (start, end) in enumerate(recessions):
         fig.add_trace(go.Scatter(
             x=[start, start, end, end, start],
-            y=[0, 100, 100, 0, 0],
+            y=[0.001, 100, 100, 0.001, 0.001],
             fill="toself",
             fillcolor="rgba(231, 76, 60, 0.15)",
             line=dict(width=0),
@@ -208,15 +208,19 @@ def render_probability_chart(scores_df):
         title="Recession Probability Over Time (1990-2026)",
         xaxis_title="Date",
         yaxis_title="Probability (%)",
-        yaxis=dict(range=[0, 105], fixedrange=True),
+        yaxis=dict(
+            type="log",
+            range=[-2, 2],
+            tickvals=[0.01, 0.1, 1, 10, 30, 60, 100],
+            ticktext=["0.01%", "0.1%", "1%", "10%", "30%", "60%", "100%"],
+            fixedrange=True
+        ),
         xaxis=dict(range=["1990-01-01", "2026-12-01"]),
         template="plotly_dark",
         height=450,
         hovermode="x unified",
         legend=dict(orientation="h", y=-0.15)
     )
-
-    st.plotly_chart(fig, use_container_width=True)
 
 def render_indicator_table(raw_df):
     st.subheader("Current Indicator Readings")
