@@ -159,37 +159,18 @@ def render_probability_chart(scores_df):
         ("2020-02-01", "2020-04-01"),
     ]
 
-    # Build recession shading as a separate dataframe
     recession_bands = pd.DataFrame([
         {"start": pd.Timestamp(s), "end": pd.Timestamp(e)}
         for s, e in recessions
     ])
 
-    # Prepare probability data
     chart_df = scores_df.reset_index()
     chart_df.columns = ["date", "probability"]
     chart_df["probability_pct"] = chart_df["probability"] * 100
 
-    # Recession shading
-    recession_rects = alt.Chart(recession_bands).mark_rect(
-        opacity=0.15,
-        color="red"
-    ).encode(
-        x=alt.X("start:T"),
-        x2="end:T",
-    )
-
-    # Probability line
     prob_line = alt.Chart(chart_df).mark_area(
         line={"color": "#5b8dee", "strokeWidth": 2},
-        color=alt.Gradient(
-            gradient="linear",
-            stops=[
-                alt.GradientStop(color="rgba(91,141,238,0.3)", offset=0),
-                alt.GradientStop(color="rgba(91,141,238,0.0)", offset=1)
-            ],
-            x1=1, x2=1, y1=1, y2=0
-        )
+        color="rgba(91,141,238,0.15)"
     ).encode(
         x=alt.X("date:T", title="Date"),
         y=alt.Y(
@@ -204,9 +185,21 @@ def render_probability_chart(scores_df):
         ]
     )
 
+    recession_rects = alt.Chart(recession_bands).mark_rect(
+        opacity=0.15,
+        color="red"
+    ).encode(
+        x=alt.X("start:T"),
+        x2="end:T",
+        y=alt.Y(alt.datum(0.01)),
+        y2=alt.Y2(alt.datum(105))
+    )
+
     chart = (recession_rects + prob_line).properties(
         height=400,
         title="Recession Probability Over Time (1990-2026)"
+    ).resolve_scale(
+        y="shared"
     ).configure_view(
         strokeWidth=0
     ).configure_axis(
