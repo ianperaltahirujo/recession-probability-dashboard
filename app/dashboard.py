@@ -179,7 +179,8 @@ def render_probability_chart(scores_df):
         color="red",
         opacity=0.4,
         strokeWidth=1.5,
-        strokeDash=[4, 4]
+        strokeDash=[4, 4],
+        clip=True
     ).encode(
         x=alt.X("date:T")
     )
