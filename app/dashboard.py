@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import json
+import os
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from datetime import datetime
@@ -13,6 +14,22 @@ st.set_page_config(
     page_icon="📉",
     layout="wide"
 )
+
+# --- Pipeline Bootstrap ---
+def run_pipeline_if_needed():
+    """
+    If the data files don't exist (first deploy or fresh server),
+    run the full pipeline to generate them before the dashboard loads.
+    """
+    if not os.path.exists("data/raw/fred_raw.csv"):
+        st.info("First run detected: fetching data and training model. This takes 2-3 minutes...")
+        os.makedirs("data/raw", exist_ok=True)
+        os.makedirs("data/processed", exist_ok=True)
+        os.makedirs("models", exist_ok=True)
+        subprocess.run([sys.executable, "-m", "pipeline.fetch_data"], check=True)
+        subprocess.run([sys.executable, "-m", "pipeline.engineer_features"], check=True)
+        subprocess.run([sys.executable, "-m", "pipeline.train_model"], check=True)
+        subprocess.run([sys.executable, "-m", "pipeline.score_current"], check=True)
 
 # --- Load Data ---
 @st.cache_data(ttl=3600)
@@ -43,6 +60,7 @@ def load_raw():
     )
     return df
 
+# --- Helpers ---
 def risk_color(risk_level):
     """Map risk tier to a display color."""
     colors = {
@@ -53,6 +71,7 @@ def risk_color(risk_level):
     }
     return colors.get(risk_level, "#95a5a6")
 
+# --- Render Functions ---
 def render_header(snapshot):
     st.title("U.S. Recession Probability Dashboard")
     st.caption(
@@ -123,6 +142,10 @@ def render_headline(snapshot):
     st.markdown("<br>", unsafe_allow_html=True)
 
 def render_probability_chart(scores_df):
+    """
+    Main chart: recession probability over time with
+    NBER recession shading for visual reference.
+    """
     recessions = [
         ("1990-07-01", "1991-03-01"),
         ("2001-03-01", "2001-11-01"),
@@ -132,8 +155,7 @@ def render_probability_chart(scores_df):
 
     fig = go.Figure()
 
-    # Add recession shading as filled scatter traces instead of vrect
-    # to avoid y-axis scaling issues
+    # Shade recession periods as filled scatter traces
     for i, (start, end) in enumerate(recessions):
         fig.add_trace(go.Scatter(
             x=[start, start, end, end, start],
@@ -147,7 +169,7 @@ def render_probability_chart(scores_df):
             hoverinfo="skip"
         ))
 
-    # Probability line on top
+    # Probability line
     fig.add_trace(go.Scatter(
         x=scores_df.index,
         y=scores_df["recession_probability"] * 100,
@@ -192,8 +214,6 @@ def render_indicator_table(raw_df):
     """
     Show the most recent value of each FRED indicator
     alongside its 12-month average for context.
-    Color-codes each row based on whether the current
-    reading is above or below its recent average.
     """
     st.subheader("Current Indicator Readings")
 
@@ -251,7 +271,9 @@ def render_methodology(snapshot):
         readings should be interpreted with caution.
         """)
 
+# --- Main ---
 def main():
+    run_pipeline_if_needed()
     scores_df = load_scores()
     snapshot = load_snapshot()
     raw_df = load_raw()
