@@ -38,7 +38,7 @@ def run_pipeline_if_needed():
             [sys.executable, "-m", "pipeline.score_current"],
             check=True
         )
-        
+
 # --- Load Data ---
 @st.cache_data(ttl=3600)
 def load_scores():
@@ -62,7 +62,7 @@ def load_snapshot():
 @st.cache_data(ttl=3600)
 def load_raw():
     df = pd.read_csv(
-        "data/raw/fred_raw.csv",
+        "data/processed/features.csv",
         index_col=0,
         parse_dates=True
     )
@@ -219,30 +219,26 @@ def render_probability_chart(scores_df):
     st.plotly_chart(fig, use_container_width=True)
 
 def render_indicator_table(raw_df):
-    """
-    Show the most recent value of each FRED indicator
-    alongside its 12-month average for context.
-    """
     st.subheader("Current Indicator Readings")
 
     latest = raw_df.dropna(how="all").ffill().iloc[-1]
     avg_12m = raw_df.tail(12).mean()
 
     indicators = {
-        "T10Y2Y":  "Yield Curve Spread (10Y-2Y, %)",
-        "UNRATE":  "Unemployment Rate (%)",
-        "ICSA":    "Initial Jobless Claims (thousands)",
-        "INDPRO":  "Industrial Production Index",
-        "UMCSENT": "Consumer Sentiment",
-        "BAA10Y":  "BAA Corporate Bond Spread (%)",
-        "PAYEMS":  "Nonfarm Payrolls (thousands)"
+        "yield_spread":   "Yield Curve Spread (10Y-2Y, %)",
+        "unrate":         "Unemployment Rate (%)",
+        "icsa":           "Initial Jobless Claims (thousands)",
+        "indpro_mom_pct": "Industrial Production MoM (%)",
+        "umcsent":        "Consumer Sentiment",
+        "credit_spread":  "BAA Corporate Bond Spread (%)",
+        "payems_mom":     "Nonfarm Payrolls MoM (thousands)"
     }
 
     rows = []
-    for series_id, label in indicators.items():
-        if series_id in latest.index:
-            current = latest[series_id]
-            avg = avg_12m[series_id]
+    for col, label in indicators.items():
+        if col in latest.index:
+            current = latest[col]
+            avg = avg_12m[col]
             delta = current - avg
             rows.append({
                 "Indicator": label,
