@@ -160,16 +160,28 @@ def risk_bg(risk_level):
 # --- Render Functions ---
 def render_header():
     st.markdown("""
-        <div style='margin-bottom: 8px;'>
-            <span style='font-size: 11px; font-weight: 500; color: #4a4a5a;
-                         text-transform: uppercase; letter-spacing: 0.08em;'>
-                MACROECONOMIC INTELLIGENCE
-            </span>
+        <div style='padding: 60px 0 48px 0;'>
+            <div style='margin-bottom: 12px;'>
+                <span style='font-size: 11px; font-weight: 500; color: #4a4a5a;
+                             text-transform: uppercase; letter-spacing: 0.12em;
+                             background: #16161e; border: 1px solid #2a2a35;
+                             border-radius: 4px; padding: 4px 10px;'>
+                    Macroeconomic Intelligence
+                </span>
+            </div>
+            <h1 style='font-size: 52px; font-weight: 700; color: #ffffff;
+                       letter-spacing: -0.03em; margin: 16px 0 20px 0;
+                       line-height: 1.1;'>
+                U.S. Recession<br>Probability Dashboard
+            </h1>
+            <p style='font-size: 16px; color: #6b6b7b; max-width: 520px;
+                      line-height: 1.7; margin: 0 0 48px 0; font-weight: 400;'>
+                A live macroeconomic signal built on 7 FRED indicators,
+                a gradient boosting classifier, and 35 years of historical
+                data. Updated weekly via an automated Prefect pipeline.
+            </p>
+            <hr style='border: none; border-top: 1px solid #1e1e28; margin: 0;'>
         </div>
-        <h1 style='font-size: 28px; font-weight: 600; color: #e2e2e2;
-                   letter-spacing: -0.02em; margin: 0 0 4px 0;'>
-            U.S. Recession Probability
-        </h1>
     """, unsafe_allow_html=True)
 
 def render_headline(snapshot):
