@@ -152,21 +152,37 @@ def render_headline(snapshot):
 def render_probability_chart(scores_df):
     import altair as alt
 
-    recessions = [
-        ("1990-07-01", "1991-03-01"),
-        ("2001-03-01", "2001-11-01"),
-        ("2007-12-01", "2009-06-01"),
-        ("2020-02-01", "2020-04-01"),
-    ]
-
-    recession_bands = pd.DataFrame([
-        {"start": pd.Timestamp(s), "end": pd.Timestamp(e)}
-        for s, e in recessions
-    ])
-
     chart_df = scores_df.reset_index()
     chart_df.columns = ["date", "probability"]
     chart_df["probability_pct"] = chart_df["probability"] * 100
+
+    recession_starts = pd.DataFrame({
+        "date": [
+            pd.Timestamp("1990-07-01"),
+            pd.Timestamp("1991-03-01"),
+            pd.Timestamp("2001-03-01"),
+            pd.Timestamp("2001-11-01"),
+            pd.Timestamp("2007-12-01"),
+            pd.Timestamp("2009-06-01"),
+            pd.Timestamp("2020-02-01"),
+            pd.Timestamp("2020-04-01"),
+        ],
+        "label": [
+            "Recession Start", "Recession End",
+            "Recession Start", "Recession End",
+            "Recession Start", "Recession End",
+            "Recession Start", "Recession End",
+        ]
+    })
+
+    rules = alt.Chart(recession_starts).mark_rule(
+        color="red",
+        opacity=0.4,
+        strokeWidth=1.5,
+        strokeDash=[4, 4]
+    ).encode(
+        x=alt.X("date:T")
+    )
 
     prob_line = alt.Chart(chart_df).mark_area(
         line={"color": "#5b8dee", "strokeWidth": 2},
@@ -185,21 +201,9 @@ def render_probability_chart(scores_df):
         ]
     )
 
-    recession_rects = alt.Chart(recession_bands).mark_rect(
-        opacity=0.15,
-        color="red"
-    ).encode(
-        x=alt.X("start:T"),
-        x2="end:T",
-        y=alt.Y(alt.datum(0.01)),
-        y2=alt.Y2(alt.datum(105))
-    )
-
-    chart = (recession_rects + prob_line).properties(
+    chart = (rules + prob_line).properties(
         height=400,
         title="Recession Probability Over Time (1990-2026)"
-    ).resolve_scale(
-        y="shared"
     ).configure_view(
         strokeWidth=0
     ).configure_axis(
