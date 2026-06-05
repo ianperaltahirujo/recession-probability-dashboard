@@ -193,8 +193,8 @@ def render_probability_chart(scores_df):
         y=alt.Y(
             "probability_pct:Q",
             title="Probability (%)",
-            scale=alt.Scale(type="log", domain=[0.01, 105]),
-            axis=alt.Axis(values=[0.01, 0.1, 1, 10, 30, 60, 100])
+            scale=alt.Scale(type="log", domain=[0.5, 105]),
+            axis=alt.Axis(values=[1, 10, 30, 60, 100])
         ),
         tooltip=[
             alt.Tooltip("date:T", title="Date", format="%b %Y"),
