@@ -18,19 +18,27 @@ st.set_page_config(
 # --- Pipeline Bootstrap ---
 def run_pipeline_if_needed():
     """
-    If the data files don't exist (first deploy or fresh server),
-    run the full pipeline to generate them before the dashboard loads.
+    On cold start, only fetch fresh data and score against
+    the pre-trained model. Never retrain on the server.
+    Training happens locally and model artifacts are committed to the repo.
     """
-    if not os.path.exists("data/raw/fred_raw.csv"):
-        st.info("First run detected: fetching data and training model. This takes 2-3 minutes...")
+    if not os.path.exists("data/processed/scores.csv"):
+        st.info("Refreshing data, please wait...")
         os.makedirs("data/raw", exist_ok=True)
         os.makedirs("data/processed", exist_ok=True)
-        os.makedirs("models", exist_ok=True)
-        subprocess.run([sys.executable, "-m", "pipeline.fetch_data"], check=True)
-        subprocess.run([sys.executable, "-m", "pipeline.engineer_features"], check=True)
-        subprocess.run([sys.executable, "-m", "pipeline.train_model"], check=True)
-        subprocess.run([sys.executable, "-m", "pipeline.score_current"], check=True)
-
+        subprocess.run(
+            [sys.executable, "-m", "pipeline.fetch_data"],
+            check=True
+        )
+        subprocess.run(
+            [sys.executable, "-m", "pipeline.engineer_features"],
+            check=True
+        )
+        subprocess.run(
+            [sys.executable, "-m", "pipeline.score_current"],
+            check=True
+        )
+        
 # --- Load Data ---
 @st.cache_data(ttl=3600)
 def load_scores():
