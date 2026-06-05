@@ -150,10 +150,8 @@ def render_headline(snapshot):
     st.markdown("<br>", unsafe_allow_html=True)
 
 def render_probability_chart(scores_df):
-    """
-    Main chart: recession probability over time with
-    NBER recession shading for visual reference.
-    """
+    import altair as alt
+
     recessions = [
         ("1990-07-01", "1991-03-01"),
         ("2001-03-01", "2001-11-01"),
@@ -161,66 +159,67 @@ def render_probability_chart(scores_df):
         ("2020-02-01", "2020-04-01"),
     ]
 
-    fig = go.Figure()
+    # Build recession shading as a separate dataframe
+    recession_bands = pd.DataFrame([
+        {"start": pd.Timestamp(s), "end": pd.Timestamp(e)}
+        for s, e in recessions
+    ])
 
-    # Shade recession periods as filled scatter traces
-    for i, (start, end) in enumerate(recessions):
-        fig.add_trace(go.Scatter(
-            x=[start, start, end, end, start],
-            y=[0.001, 100, 100, 0.001, 0.001],
-            fill="toself",
-            fillcolor="rgba(231, 76, 60, 0.15)",
-            line=dict(width=0),
-            mode="lines",
-            name="NBER Recession" if i == 0 else None,
-            showlegend=(i == 0),
-            hoverinfo="skip"
-        ))
+    # Prepare probability data
+    chart_df = scores_df.reset_index()
+    chart_df.columns = ["date", "probability"]
+    chart_df["probability_pct"] = chart_df["probability"] * 100
+
+    # Recession shading
+    recession_rects = alt.Chart(recession_bands).mark_rect(
+        opacity=0.15,
+        color="red"
+    ).encode(
+        x=alt.X("start:T"),
+        x2="end:T",
+        y=alt.value(0),
+        y2=alt.value(450)
+    )
 
     # Probability line
-    fig.add_trace(go.Scatter(
-        x=scores_df.index,
-        y=scores_df["recession_probability"] * 100,
-        mode="lines",
-        name="Recession Probability",
-        line=dict(color="#5b8dee", width=2),
-        fill="tozeroy",
-        fillcolor="rgba(91, 141, 238, 0.1)",
-        hovertemplate="%{x|%b %Y}: %{y:.2f}%<extra></extra>"
-    ))
-
-    # Risk threshold lines
-    for threshold, label, color in [
-        (10, "Low / Elevated", "#f39c12"),
-        (30, "Elevated / High", "#e67e22"),
-        (60, "High / Critical", "#e74c3c")
-    ]:
-        fig.add_hline(
-            y=threshold,
-            line_dash="dot",
-            line_color=color,
-            opacity=0.5,
-            annotation_text=label,
-            annotation_position="right"
+    prob_line = alt.Chart(chart_df).mark_area(
+        line={"color": "#5b8dee", "strokeWidth": 2},
+        color=alt.Gradient(
+            gradient="linear",
+            stops=[
+                alt.GradientStop(color="rgba(91,141,238,0.3)", offset=0),
+                alt.GradientStop(color="rgba(91,141,238,0.0)", offset=1)
+            ],
+            x1=1, x2=1, y1=1, y2=0
         )
-
-    fig.update_layout(
-        title="Recession Probability Over Time (1990-2026)",
-        xaxis_title="Date",
-        yaxis_title="Probability (%)",
-        yaxis=dict(
-            type="log",
-            range=[-2, 2],
-            tickvals=[0.01, 0.1, 1, 10, 30, 60, 100],
-            ticktext=["0.01%", "0.1%", "1%", "10%", "30%", "60%", "100%"],
-            fixedrange=True
+    ).encode(
+        x=alt.X("date:T", title="Date"),
+        y=alt.Y(
+            "probability_pct:Q",
+            title="Probability (%)",
+            scale=alt.Scale(type="log", domain=[0.01, 105]),
+            axis=alt.Axis(values=[0.01, 0.1, 1, 10, 30, 60, 100])
         ),
-        xaxis=dict(range=["1990-01-01", "2026-12-01"]),
-        template="plotly_dark",
-        height=450,
-        hovermode="x unified",
-        legend=dict(orientation="h", y=-0.15)
+        tooltip=[
+            alt.Tooltip("date:T", title="Date", format="%b %Y"),
+            alt.Tooltip("probability_pct:Q", title="Probability (%)", format=".2f")
+        ]
     )
+
+    chart = (recession_rects + prob_line).properties(
+        height=400,
+        title="Recession Probability Over Time (1990-2026)"
+    ).configure_view(
+        strokeWidth=0
+    ).configure_axis(
+        gridColor="#333333",
+        labelColor="#aaaaaa",
+        titleColor="#aaaaaa"
+    ).configure_title(
+        color="#ffffff"
+    )
+
+    st.altair_chart(chart, use_container_width=True)
 
 def render_indicator_table(raw_df):
     st.subheader("Current Indicator Readings")
