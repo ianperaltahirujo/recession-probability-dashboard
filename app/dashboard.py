@@ -292,5 +292,4 @@ def main():
     render_indicator_table(raw_df)
     render_methodology(snapshot)
 
-if __name__ == "__main__":
-    main()
+main()
