@@ -161,13 +161,11 @@ def risk_bg(risk_level):
 def render_header():
     st.markdown("""
         <div style='padding: 48px 0 36px 0;'>
-            <div style='margin-bottom: 16px;'>
-                <span style='font-size: 13px; font-weight: 600; letter-spacing: 0.06em;
-                             background: linear-gradient(90deg, #6ea8f7, #c084fc, #f472b6, #fb923c);
-                             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-                             background-clip: text;'>
-                    MACROECONOMIC INTELLIGENCE
-                </span>
+            <div style='font-size: 13px; font-weight: 600; letter-spacing: 0.06em;
+                        background: linear-gradient(90deg, #6ea8f7, #c084fc, #f472b6, #fb923c);
+                        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+                        background-clip: text; margin-bottom: 16px;'>
+                MACROECONOMIC INTELLIGENCE
             </div>
             <h1 style='font-size: 52px; font-weight: 700; color: #ffffff;
                        letter-spacing: -0.03em; margin: 0 0 20px 0; line-height: 1.1;'>
@@ -237,6 +235,15 @@ def render_headline(snapshot):
 
 def render_probability_chart(scores_df):
     import altair as alt
+
+    st.markdown("""
+        <div style='font-size: 13px; font-weight: 600; letter-spacing: 0.06em;
+                    background: linear-gradient(90deg, #6ea8f7, #c084fc, #f472b6, #fb923c);
+                    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+                    background-clip: text; margin-bottom: 12px; margin-top: 32px;'>
+            PROBABILITY OVER TIME
+        </div>
+    """, unsafe_allow_html=True)
 
     chart_df = scores_df.reset_index()
     chart_df.columns = ["date", "probability"]
@@ -349,20 +356,25 @@ def render_probability_chart(scores_df):
 
     st.altair_chart(chart, use_container_width=True)
     st.markdown("""
-        <div style='font-family: monospace; font-size: 11px; color: #4a4a5a;
-                    margin-top: -12px; padding-bottom: 16px;'>
-            <span style='color: #f59e0b;'>━━ Amber line</span> = 10% alert threshold &nbsp;|&nbsp;
-            <span style='color: #ef4444;'>╌╌ Red lines</span> = NBER recession boundaries &nbsp;|&nbsp;
-            Note elevated readings in 2003, post-2020, and early 2025.
+        <div style='font-family: monospace; font-size: 12px; color: #ffffff;
+                    opacity: 0.7; margin-top: -12px; padding-bottom: 16px;
+                    line-height: 1.7;'>
+            <span style='color: #f59e0b;'>━━ Amber line</span>
+            <span style='color: #ffffff; opacity: 0.7;'> = 10% alert threshold</span>
+            &nbsp;|&nbsp;
+            <span style='color: #ef4444;'>╌╌ Red lines</span>
+            <span style='color: #ffffff; opacity: 0.7;'> = NBER recession boundaries</span>
+            &nbsp;|&nbsp;
+            <span style='color: #ffffff; opacity: 0.7;'>Note elevated readings in 2003, post-2020, and early 2025.</span>
         </div>
     """, unsafe_allow_html=True)
 
 
 def render_lead_time_table():
     st.markdown("""
-        <div style='font-family: monospace; font-size: 11px; color: #4a4a5a;
-                    margin-bottom: 12px; letter-spacing: 0.06em;
-                    text-transform: uppercase;'>
+        <div style='font-family: monospace; font-size: 13px; font-weight: 600;
+                    color: #ffffff; letter-spacing: 0.06em;
+                    text-transform: uppercase; margin-bottom: 12px; margin-top: 8px;'>
             Model Signal vs NBER Official Dating
         </div>
     """, unsafe_allow_html=True)
@@ -406,8 +418,9 @@ def render_lead_time_table():
     )
 
     st.markdown("""
-        <div style='font-family: monospace; font-size: 11px; color: #4a4a5a;
-                    margin-top: 8px; padding-bottom: 8px;'>
+        <div style='font-family: monospace; font-size: 13px; color: #ffffff;
+                    opacity: 0.7; margin-top: 8px; padding-bottom: 8px;
+                    line-height: 1.7;'>
             NBER confirms recessions with a 6&ndash;18 month lag after the fact.
             This model provides real-time scoring as new FRED data is released,
             vs. NBER dating which relies on comprehensive historical revision.
@@ -418,7 +431,12 @@ def render_lead_time_table():
 
 def render_indicator_table(features_df):
     st.markdown("""
-        <div class='linear-section-header'>Current Indicator Readings</div>
+        <div style='font-size: 13px; font-weight: 600; letter-spacing: 0.06em;
+                    background: linear-gradient(90deg, #6ea8f7, #c084fc, #f472b6, #fb923c);
+                    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+                    background-clip: text; margin-bottom: 12px; margin-top: 32px;'>
+            CURRENT INDICATOR READINGS
+        </div>
     """, unsafe_allow_html=True)
 
     latest = features_df.dropna(how="all").ffill().iloc[-1]
@@ -455,6 +473,156 @@ def render_indicator_table(features_df):
         hide_index=True,
         height=280
     )
+
+@st.cache_data(ttl=3600)
+def load_model():
+    import joblib
+    model = joblib.load("models/best_model.pkl")
+    return model
+
+def render_feature_importance():
+    import joblib
+    import numpy as np
+
+    st.markdown("""
+        <div style='font-size: 13px; font-weight: 600; letter-spacing: 0.06em;
+                    background: linear-gradient(90deg, #6ea8f7, #c084fc, #f472b6, #fb923c);
+                    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+                    background-clip: text; margin-bottom: 12px; margin-top: 32px;'>
+            FEATURE IMPORTANCE
+        </div>
+    """, unsafe_allow_html=True)
+
+    try:
+        model = joblib.load("models/best_model.pkl")
+
+        # CalibratedClassifierCV wraps the base estimator
+        # Extract feature importances from the base estimators
+        if hasattr(model, 'calibrated_classifiers_'):
+            importances = np.mean([
+                cc.estimator.feature_importances_
+                for cc in model.calibrated_classifiers_
+            ], axis=0)
+        elif hasattr(model, 'feature_importances_'):
+            importances = model.feature_importances_
+        else:
+            st.info("Feature importances not available for this model type.")
+            return
+
+        feature_names = [
+            "Yield Spread", "Yield Spread 3M Avg", "Yield Inverted",
+            "Unemployment", "Unemployment MoM", "Unemployment 3M Avg",
+            "Unemployment YoY", "Jobless Claims", "Jobless Claims 3M Avg",
+            "Jobless Claims YoY%", "Indust. Prod. MoM%", "Indust. Prod. YoY%",
+            "Consumer Sentiment", "Sentiment YoY", "Credit Spread",
+            "Credit Spread 3M Avg", "Credit Spread MoM", "Payrolls MoM",
+            "Payrolls 3M Avg"
+        ]
+
+        # Pad or trim if mismatch
+        n = len(importances)
+        names = feature_names[:n] if n <= len(feature_names) else feature_names + [f"Feature {i}" for i in range(len(feature_names), n)]
+
+        importance_df = pd.DataFrame({
+            "Feature": names,
+            "Importance": importances
+        }).sort_values("Importance", ascending=False).head(10)
+
+        chart = alt.Chart(importance_df).mark_bar(
+            color="#8b95f5",
+            cornerRadiusTopRight=3,
+            cornerRadiusBottomRight=3
+        ).encode(
+            x=alt.X("Importance:Q", title="Feature Importance",
+                    axis=alt.Axis(labelColor="#4a4a5a", gridColor="#1e1e28",
+                                  tickColor="#1e1e28", titleColor="#4a4a5a")),
+            y=alt.Y("Feature:N", sort="-x", title=None,
+                    axis=alt.Axis(labelColor="#ffffff", labelFontSize=12)),
+            tooltip=[
+                alt.Tooltip("Feature:N", title="Feature"),
+                alt.Tooltip("Importance:Q", title="Importance", format=".4f")
+            ]
+        ).properties(
+            height=320
+        ).configure_view(
+            strokeWidth=0,
+            fill="#16161e"
+        ).configure_axis(
+            domain=False
+        ).configure(
+            background="#16161e"
+        )
+
+        st.altair_chart(chart, use_container_width=True)
+        st.markdown("""
+            <div style='font-family: monospace; font-size: 12px; color: #ffffff;
+                        opacity: 0.7; margin-top: -12px; padding-bottom: 16px;'>
+                Top 10 features by mean importance across calibrated estimators.
+                Higher values indicate greater influence on recession probability output.
+            </div>
+        """, unsafe_allow_html=True)
+
+    except Exception as e:
+        st.info(f"Feature importance unavailable: {e}")
+
+
+def render_current_drivers(features_df):
+    st.markdown("""
+        <div style='font-size: 13px; font-weight: 600; letter-spacing: 0.06em;
+                    background: linear-gradient(90deg, #6ea8f7, #c084fc, #f472b6, #fb923c);
+                    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+                    background-clip: text; margin-bottom: 12px; margin-top: 32px;'>
+            WHAT IS DRIVING THE CURRENT READING
+        </div>
+    """, unsafe_allow_html=True)
+
+    latest = features_df.dropna(how="all").ffill().iloc[-1]
+    historical_mean = features_df.mean()
+    historical_std = features_df.std()
+
+    # Compute z-scores for key indicators
+    key_indicators = {
+        "yield_spread":   "Yield Curve Spread",
+        "unrate":         "Unemployment Rate",
+        "unrate_yoy":     "Unemployment YoY Change",
+        "icsa_yoy_pct":   "Jobless Claims YoY %",
+        "indpro_yoy_pct": "Industrial Production YoY %",
+        "umcsent":        "Consumer Sentiment",
+        "credit_spread":  "Credit Spread",
+        "payems_mom":     "Payrolls MoM",
+    }
+
+    rows = []
+    for col, label in key_indicators.items():
+        if col in latest.index and historical_std[col] > 0:
+            z = (latest[col] - historical_mean[col]) / historical_std[col]
+            current_val = round(latest[col], 3)
+            rows.append({
+                "Indicator": label,
+                "Current Value": current_val,
+                "Z-Score": round(z, 2),
+                "Signal": "🔴 Stress" if z > 1.5 else ("🟡 Elevated" if z > 0.5 else "🟢 Normal")
+            })
+
+    drivers_df = pd.DataFrame(rows).sort_values("Z-Score", ascending=False)
+
+    st.dataframe(
+        drivers_df,
+        use_container_width=True,
+        hide_index=True,
+        height=340
+    )
+
+    st.markdown("""
+        <div style='font-family: monospace; font-size: 12px; color: #ffffff;
+                    opacity: 0.7; margin-top: 8px; padding-bottom: 16px;
+                    line-height: 1.7;'>
+            Z-score measures how many standard deviations each indicator is from its
+            historical mean (1990&ndash;2026). Values above +1.5 indicate historically
+            unusual stress levels. Sorted by current stress level, highest first.
+        </div>
+    """, unsafe_allow_html=True)
+
 
 def render_methodology():
     st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
@@ -509,6 +677,8 @@ render_header()
 render_headline(snapshot)
 render_probability_chart(scores_df)
 render_lead_time_table()
+render_feature_importance()
+render_current_drivers(features_df)
 render_indicator_table(features_df)
 render_methodology()
 render_footer(snapshot)
