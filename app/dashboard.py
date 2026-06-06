@@ -161,13 +161,11 @@ def risk_bg(risk_level):
 def render_header():
     st.markdown("""
         <div style='padding: 48px 0 36px 0;'>
-            <div style='margin-bottom: 16px;'>
-                <span style='font-size: 13px; font-weight: 600; letter-spacing: 0.06em;
-                             background: linear-gradient(90deg, #6ea8f7, #c084fc, #f472b6, #fb923c);
-                             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-                             background-clip: text; display: inline-block;'>
-                    MACROECONOMIC INTELLIGENCE
-                </span>
+            <div style='font-size: 13px; font-weight: 600; letter-spacing: 0.06em;
+                        background: linear-gradient(90deg, #6ea8f7, #c084fc, #f472b6, #fb923c);
+                        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+                        background-clip: text; margin-bottom: 16px;'>
+                MACROECONOMIC INTELLIGENCE
             </div>
             <h1 style='font-size: 52px; font-weight: 700; color: #ffffff;
                        letter-spacing: -0.03em; margin: 0 0 20px 0; line-height: 1.1;'>
