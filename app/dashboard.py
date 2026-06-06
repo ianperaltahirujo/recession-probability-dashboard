@@ -165,7 +165,7 @@ def render_header():
                 <span style='font-size: 13px; font-weight: 600; letter-spacing: 0.06em;
                              background: linear-gradient(90deg, #6ea8f7, #c084fc, #f472b6, #fb923c);
                              -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-                             background-clip: text;'>
+                             background-clip: text; display: inline-block;'>
                     MACROECONOMIC INTELLIGENCE
                 </span>
             </div>
@@ -358,11 +358,16 @@ def render_probability_chart(scores_df):
 
     st.altair_chart(chart, use_container_width=True)
     st.markdown("""
-        <div style='font-family: monospace; font-size: 11px; color: #4a4a5a;
-                    margin-top: -12px; padding-bottom: 16px;'>
-            <span style='color: #f59e0b;'>━━ Amber line</span> = 10% alert threshold &nbsp;|&nbsp;
-            <span style='color: #ef4444;'>╌╌ Red lines</span> = NBER recession boundaries &nbsp;|&nbsp;
-            Note elevated readings in 2003, post-2020, and early 2025.
+        <div style='font-family: monospace; font-size: 12px; color: #ffffff;
+                    opacity: 0.7; margin-top: -12px; padding-bottom: 16px;
+                    line-height: 1.7;'>
+            <span style='color: #f59e0b;'>━━ Amber line</span>
+            <span style='color: #ffffff; opacity: 0.7;'> = 10% alert threshold</span>
+            &nbsp;|&nbsp;
+            <span style='color: #ef4444;'>╌╌ Red lines</span>
+            <span style='color: #ffffff; opacity: 0.7;'> = NBER recession boundaries</span>
+            &nbsp;|&nbsp;
+            <span style='color: #ffffff; opacity: 0.7;'>Note elevated readings in 2003, post-2020, and early 2025.</span>
         </div>
     """, unsafe_allow_html=True)
 
