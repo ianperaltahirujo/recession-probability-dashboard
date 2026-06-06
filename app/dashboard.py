@@ -369,9 +369,9 @@ def render_probability_chart(scores_df):
 
 def render_lead_time_table():
     st.markdown("""
-        <div style='font-family: monospace; font-size: 11px; color: #4a4a5a;
-                    margin-bottom: 12px; letter-spacing: 0.06em;
-                    text-transform: uppercase;'>
+        <div style='font-family: monospace; font-size: 13px; font-weight: 600;
+                    color: #ffffff; letter-spacing: 0.06em;
+                    text-transform: uppercase; margin-bottom: 12px; margin-top: 8px;'>
             Model Signal vs NBER Official Dating
         </div>
     """, unsafe_allow_html=True)
@@ -415,8 +415,9 @@ def render_lead_time_table():
     )
 
     st.markdown("""
-        <div style='font-family: monospace; font-size: 11px; color: #4a4a5a;
-                    margin-top: 8px; padding-bottom: 8px;'>
+        <div style='font-family: monospace; font-size: 13px; color: #ffffff;
+                    opacity: 0.7; margin-top: 8px; padding-bottom: 8px;
+                    line-height: 1.7;'>
             NBER confirms recessions with a 6&ndash;18 month lag after the fact.
             This model provides real-time scoring as new FRED data is released,
             vs. NBER dating which relies on comprehensive historical revision.
