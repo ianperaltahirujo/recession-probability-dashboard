@@ -256,25 +256,59 @@ def render_probability_chart(scores_df):
         ]
     })
 
-    rules = alt.Chart(recession_starts).mark_rule(
-        color="#ef4444", opacity=0.3,
-        strokeWidth=1, strokeDash=[3, 3], clip=True
-    ).encode(x=alt.X("date:T"))
+    # Date range selector
+    min_date = chart_df["date"].min().to_pydatetime()
+    max_date = chart_df["date"].max().to_pydatetime()
 
-    threshold_df = pd.DataFrame({
-        "date": [chart_df["date"].min(), chart_df["date"].max()],
+    date_range = st.slider(
+        "Zoom into time range",
+        min_value=min_date,
+        max_value=max_date,
+        value=(min_date, max_date),
+        format="YYYY-MM",
+        label_visibility="collapsed"
+    )
+
+    # Filter data to selected range
+    mask = (
+        (chart_df["date"] >= pd.Timestamp(date_range[0])) &
+        (chart_df["date"] <= pd.Timestamp(date_range[1]))
+    )
+    filtered_df = chart_df[mask]
+
+    filtered_threshold = pd.DataFrame({
+        "date": [filtered_df["date"].min(), filtered_df["date"].max()],
         "probability_pct": [10, 10]
     })
-    threshold_line = alt.Chart(threshold_df).mark_line(
-        color="#f59e0b", strokeWidth=1.5,
-        strokeDash=[6, 3], opacity=0.7
+
+    filtered_rules = recession_starts[
+        (recession_starts["date"] >= pd.Timestamp(date_range[0])) &
+        (recession_starts["date"] <= pd.Timestamp(date_range[1]))
+    ]
+
+    # Threshold line
+    threshold_line = alt.Chart(filtered_threshold).mark_line(
+        color="#f59e0b",
+        strokeWidth=1.5,
+        strokeDash=[6, 3],
+        opacity=0.7
     ).encode(
         x=alt.X("date:T"),
         y=alt.Y("probability_pct:Q",
                 scale=alt.Scale(domain=[0, 105]))
     )
 
-    prob_line = alt.Chart(chart_df).mark_area(
+    # Recession boundary rules
+    rules_filtered = alt.Chart(filtered_rules).mark_rule(
+        color="#ef4444",
+        opacity=0.3,
+        strokeWidth=1,
+        strokeDash=[3, 3],
+        clip=True
+    ).encode(x=alt.X("date:T"))
+
+    # Probability area
+    prob_filtered = alt.Chart(filtered_df).mark_area(
         line={"color": "#8b95f5", "strokeWidth": 1.5},
         color="rgba(91, 106, 240, 0.15)"
     ).encode(
@@ -303,10 +337,11 @@ def render_probability_chart(scores_df):
         ]
     )
 
-    chart = (rules + threshold_line + prob_line).properties(
+    chart = (rules_filtered + threshold_line + prob_filtered).properties(
         height=360
     ).configure_view(
-        strokeWidth=0, fill="#16161e"
+        strokeWidth=0,
+        fill="#16161e"
     ).configure_axis(
         domain=False
     ).configure(
