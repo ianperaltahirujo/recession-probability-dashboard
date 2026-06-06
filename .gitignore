@@ -1,7 +1,7 @@
 venv/
 .env
 mlruns/
+mlflow.db
 __pycache__/
 *.pyc
 .DS_Store
-mlflow.db
