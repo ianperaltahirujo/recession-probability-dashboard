@@ -160,22 +160,21 @@ def risk_bg(risk_level):
 # --- Render Functions ---
 def render_header():
     st.markdown("""
-        <div style='padding: 60px 0 48px 0;'>
-            <div style='margin-bottom: 12px;'>
-                <span style='font-size: 11px; font-weight: 500; color: #4a4a5a;
-                             text-transform: uppercase; letter-spacing: 0.12em;
-                             background: #16161e; border: 1px solid #2a2a35;
-                             border-radius: 4px; padding: 4px 10px;'>
-                    Macroeconomic Intelligence
+        <div style='padding: 48px 0 36px 0;'>
+            <div style='margin-bottom: 16px;'>
+                <span style='font-size: 13px; font-weight: 600; letter-spacing: 0.06em;
+                             background: linear-gradient(90deg, #6ea8f7, #c084fc, #f472b6, #fb923c);
+                             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+                             background-clip: text;'>
+                    MACROECONOMIC INTELLIGENCE
                 </span>
             </div>
             <h1 style='font-size: 52px; font-weight: 700; color: #ffffff;
-                       letter-spacing: -0.03em; margin: 16px 0 20px 0;
-                       line-height: 1.1;'>
+                       letter-spacing: -0.03em; margin: 0 0 20px 0; line-height: 1.1;'>
                 U.S. Recession<br>Probability Dashboard
             </h1>
-            <p style='font-size: 16px; color: #6b6b7b; max-width: 520px;
-                      line-height: 1.7; margin: 0 0 48px 0; font-weight: 400;'>
+            <p style='font-size: 17px; color: #ffffff; max-width: 560px;
+                      line-height: 1.75; margin: 0 0 36px 0; font-weight: 400; opacity: 0.75;'>
                 A live macroeconomic signal built on 7 FRED indicators,
                 a gradient boosting classifier, and 35 years of historical
                 data. Updated weekly via an automated Prefect pipeline.
@@ -238,6 +237,15 @@ def render_headline(snapshot):
 
 def render_probability_chart(scores_df):
     import altair as alt
+
+    st.markdown("""
+        <div style='font-size: 13px; font-weight: 600; letter-spacing: 0.06em;
+                    background: linear-gradient(90deg, #6ea8f7, #c084fc, #f472b6, #fb923c);
+                    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+                    background-clip: text; margin-bottom: 12px; margin-top: 32px;'>
+            PROBABILITY OVER TIME
+        </div>
+    """, unsafe_allow_html=True)
 
     chart_df = scores_df.reset_index()
     chart_df.columns = ["date", "probability"]
@@ -419,7 +427,12 @@ def render_lead_time_table():
 
 def render_indicator_table(features_df):
     st.markdown("""
-        <div class='linear-section-header'>Current Indicator Readings</div>
+        <div style='font-size: 13px; font-weight: 600; letter-spacing: 0.06em;
+                    background: linear-gradient(90deg, #6ea8f7, #c084fc, #f472b6, #fb923c);
+                    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+                    background-clip: text; margin-bottom: 12px; margin-top: 32px;'>
+            CURRENT INDICATOR READINGS
+        </div>
     """, unsafe_allow_html=True)
 
     latest = features_df.dropna(how="all").ffill().iloc[-1]
@@ -491,12 +504,12 @@ def render_methodology():
 
 def render_footer(snapshot):
     st.markdown(f"""
-        <hr class='linear-divider'>
-        <div style='font-size: 11px; color: #4a4a5a; display: flex;
-                    justify-content: space-between;'>
+        <hr style='border: none; border-top: 1px solid #1e1e28; margin: 32px 0 16px 0;'>
+        <div style='font-size: 12px; color: #ffffff; opacity: 0.4;
+                    display: flex; justify-content: space-between;
+                    font-family: monospace; padding-bottom: 24px;'>
             <span>Last updated: {snapshot["last_updated"]}</span>
-            <span>Data: FRED API | Model: Gradient Boosting + Isotonic Calibration
-                  | Orchestration: Prefect</span>
+            <span>FRED API · Gradient Boosting · MLflow · Prefect · Streamlit</span>
         </div>
     """, unsafe_allow_html=True)
 
