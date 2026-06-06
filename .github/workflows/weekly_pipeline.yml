@@ -23,6 +23,9 @@ jobs:
           pip install fredapi pandas numpy scikit-learn mlflow prefect \
                       streamlit python-dotenv plotly altair joblib
 
+      - name: Create data directories
+        run: mkdir -p data/raw data/processed models
+
       - name: Run fetch
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
