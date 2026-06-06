@@ -7,6 +7,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.metrics import roc_auc_score, brier_score_loss
 from sklearn.preprocessing import StandardScaler
+from sklearn.calibration import CalibratedClassifierCV
 import joblib
 import os
 
@@ -75,14 +76,19 @@ def train_and_log(X, y):
             class_weight = "balanced"  # Corrects for the imbalance between
                                      # recession months (31) and normal months (390)
         ),
-        "gradient_boosting": GradientBoostingClassifier(
-            n_estimators = 200,
-            learning_rate = 0.05,
-            max_depth = 3,
-            subsample = 0.8,
-            random_state = 42
-)
-    }
+        "gradient_boosting": CalibratedClassifierCV(
+            GradientBoostingClassifier(
+                n_estimators=200,
+                learning_rate=0.05,
+                max_depth=3,
+                subsample=0.8,
+                random_state=42
+            ),
+            method="isotonic",
+            cv=3
+        )
+    
+            }
 
     results = {}
 
