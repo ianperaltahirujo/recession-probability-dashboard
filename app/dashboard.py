@@ -352,8 +352,8 @@ def render_probability_chart(scores_df):
     st.markdown("""
         <div style='font-family: monospace; font-size: 11px; color: #4a4a5a;
                     margin-top: -12px; padding-bottom: 16px;'>
-            Dashed amber line = 10% alert threshold &nbsp;|&nbsp;
-            Dashed red lines = NBER recession boundaries &nbsp;|&nbsp;
+            <span style='color: #f59e0b;'>━━ Amber line</span> = 10% alert threshold &nbsp;|&nbsp;
+            <span style='color: #ef4444;'>╌╌ Red lines</span> = NBER recession boundaries &nbsp;|&nbsp;
             Note elevated readings in 2003, post-2020, and early 2025.
         </div>
     """, unsafe_allow_html=True)
