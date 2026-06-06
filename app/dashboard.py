@@ -138,6 +138,12 @@ def load_features():
     )
     return df
 
+@st.cache_data(ttl=3600)
+def load_model():
+    import joblib
+    model = joblib.load("models/best_model.pkl")
+    return model
+
 # --- Helpers ---
 def risk_color(risk_level):
     colors = {
@@ -474,12 +480,6 @@ def render_indicator_table(features_df):
         height=280
     )
 
-@st.cache_data(ttl=3600)
-def load_model():
-    import joblib
-    model = joblib.load("models/best_model.pkl")
-    return model
-
 def render_feature_importance():
     import joblib
     import numpy as np
@@ -496,8 +496,6 @@ def render_feature_importance():
     try:
         model = joblib.load("models/best_model.pkl")
 
-        # CalibratedClassifierCV wraps the base estimator
-        # Extract feature importances from the base estimators
         if hasattr(model, 'calibrated_classifiers_'):
             importances = np.mean([
                 cc.estimator.feature_importances_
@@ -519,7 +517,6 @@ def render_feature_importance():
             "Payrolls 3M Avg"
         ]
 
-        # Pad or trim if mismatch
         n = len(importances)
         names = feature_names[:n] if n <= len(feature_names) else feature_names + [f"Feature {i}" for i in range(len(feature_names), n)]
 
@@ -580,7 +577,6 @@ def render_current_drivers(features_df):
     historical_mean = features_df.mean()
     historical_std = features_df.std()
 
-    # Compute z-scores for key indicators
     key_indicators = {
         "yield_spread":   "Yield Curve Spread",
         "unrate":         "Unemployment Rate",
@@ -622,7 +618,6 @@ def render_current_drivers(features_df):
             unusual stress levels. Sorted by current stress level, highest first.
         </div>
     """, unsafe_allow_html=True)
-
 
 def render_methodology():
     st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
