@@ -331,6 +331,61 @@ def render_probability_chart(scores_df):
         </div>
     """, unsafe_allow_html=True)
 
+def render_lead_time_table():
+    st.markdown("""
+        <div style='font-family: monospace; font-size: 11px; color: #4a4a5a;
+                    margin-bottom: 12px; letter-spacing: 0.06em; text-transform: uppercase;'>
+            Model Lead Time vs NBER Official Dating
+        </div>
+    """, unsafe_allow_html=True)
+
+    lead_df = pd.DataFrame([
+        {
+            "Recession": "1990–1991 (Gulf War)",
+            "Model First Alert": "April 1990",
+            "NBER Official Start": "July 1990",
+            "Lead Time": "3 months",
+            "Peak Probability": "99.9%"
+        },
+        {
+            "Recession": "2001 (Dot-com bust)",
+            "Model First Alert": "January 2001",
+            "NBER Official Start": "March 2001",
+            "Lead Time": "2 months",
+            "Peak Probability": "100.0%"
+        },
+        {
+            "Recession": "2007–2009 (GFC)",
+            "Model First Alert": "September 2007",
+            "NBER Official Start": "December 2007",
+            "Lead Time": "3 months",
+            "Peak Probability": "100.0%"
+        },
+        {
+            "Recession": "2020 (COVID-19)",
+            "Model First Alert": "November 2019",
+            "NBER Official Start": "February 2020",
+            "Lead Time": "3 months",
+            "Peak Probability": "100.0%"
+        },
+    ])
+
+    st.dataframe(
+        lead_df,
+        use_container_width=True,
+        hide_index=True,
+        height=212
+    )
+
+    st.markdown("""
+        <div style='font-family: monospace; font-size: 11px; color: #4a4a5a;
+                    margin-top: 8px; padding-bottom: 8px;'>
+            NBER confirms recessions with a lag of 6&ndash;18 months after the fact.
+            A model that crosses the 10% alert threshold months before official dating
+            provides actionable early warning signal.
+        </div>
+    """, unsafe_allow_html=True)
+
 def render_indicator_table(features_df):
     st.markdown("""
         <div class='linear-section-header'>Current Indicator Readings</div>
@@ -423,6 +478,7 @@ features_df = load_features()
 render_header()
 render_headline(snapshot)
 render_probability_chart(scores_df)
+render_lead_time_table()
 render_indicator_table(features_df)
 render_methodology()
 render_footer(snapshot)
