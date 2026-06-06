@@ -197,7 +197,7 @@ revisions that NBER applies retrospectively.
 
 ## Author
 
-**Ian Eduardo Peralta Hirujo**
+**Ian Eduardo Peralta Hirujo** | 
 B.S. Applied Data Sciences, Pennsylvania State University (Sophomore, 2026)
 
 [GitHub](https://github.com/ianperaltahirujo) · [Project Landing Page](https://ianperaltahirujo.github.io/recession-probability-dashboard/)
