@@ -256,16 +256,27 @@ def render_probability_chart(scores_df):
         ]
     })
 
-    # Recession boundary rules
     rules = alt.Chart(recession_starts).mark_rule(
         color="#ef4444", opacity=0.3,
         strokeWidth=1, strokeDash=[3, 3], clip=True
     ).encode(x=alt.X("date:T"))
 
-    # Probability area
+    threshold_df = pd.DataFrame({
+        "date": [chart_df["date"].min(), chart_df["date"].max()],
+        "probability_pct": [10, 10]
+    })
+    threshold_line = alt.Chart(threshold_df).mark_line(
+        color="#f59e0b", strokeWidth=1.5,
+        strokeDash=[6, 3], opacity=0.7
+    ).encode(
+        x=alt.X("date:T"),
+        y=alt.Y("probability_pct:Q",
+                scale=alt.Scale(domain=[0, 105]))
+    )
+
     prob_line = alt.Chart(chart_df).mark_area(
         line={"color": "#8b95f5", "strokeWidth": 1.5},
-        color="rgba(91, 106, 240, 0.12)"
+        color="rgba(91, 106, 240, 0.15)"
     ).encode(
         x=alt.X("date:T", title=None,
                 axis=alt.Axis(
@@ -276,9 +287,9 @@ def render_probability_chart(scores_df):
         y=alt.Y(
             "probability_pct:Q",
             title="Probability (%)",
-            scale=alt.Scale(type="log", domain=[0.5, 105]),
+            scale=alt.Scale(domain=[0, 105]),
             axis=alt.Axis(
-                values=[1, 10, 30, 60, 100],
+                values=[0, 10, 20, 30, 50, 75, 100],
                 labelColor="#4a4a5a",
                 gridColor="#1e1e28",
                 tickColor="#1e1e28",
@@ -292,28 +303,10 @@ def render_probability_chart(scores_df):
         ]
     )
 
-    # Alert threshold as a horizontal reference line
-    # We add it as a fake data point at 10% spanning the full date range
-    threshold_df = pd.DataFrame({
-        "date": [chart_df["date"].min(), chart_df["date"].max()],
-        "probability_pct": [10, 10]
-    })
-    threshold_line = alt.Chart(threshold_df).mark_line(
-        color="#f59e0b",
-        strokeWidth=1.5,
-        strokeDash=[6, 3],
-        opacity=0.7
-    ).encode(
-        x=alt.X("date:T"),
-        y=alt.Y("probability_pct:Q",
-                scale=alt.Scale(type="log", domain=[0.5, 105]))
-    )
-
     chart = (rules + threshold_line + prob_line).properties(
         height=360
     ).configure_view(
-        strokeWidth=0,
-        fill="#16161e"
+        strokeWidth=0, fill="#16161e"
     ).configure_axis(
         domain=False
     ).configure(
@@ -326,46 +319,47 @@ def render_probability_chart(scores_df):
                     margin-top: -12px; padding-bottom: 16px;'>
             Dashed amber line = 10% alert threshold &nbsp;|&nbsp;
             Dashed red lines = NBER recession boundaries &nbsp;|&nbsp;
-            The model crossed 10% probability 2&ndash;3 months before
-            NBER confirmed all four recession cycles.
+            Note elevated readings in 2003, post-2020, and early 2025.
         </div>
     """, unsafe_allow_html=True)
+
 
 def render_lead_time_table():
     st.markdown("""
         <div style='font-family: monospace; font-size: 11px; color: #4a4a5a;
-                    margin-bottom: 12px; letter-spacing: 0.06em; text-transform: uppercase;'>
-            Model Lead Time vs NBER Official Dating
+                    margin-bottom: 12px; letter-spacing: 0.06em;
+                    text-transform: uppercase;'>
+            Model Signal vs NBER Official Dating
         </div>
     """, unsafe_allow_html=True)
 
     lead_df = pd.DataFrame([
         {
             "Recession": "1990–1991 (Gulf War)",
-            "Model First Alert": "April 1990",
-            "NBER Official Start": "July 1990",
-            "Lead Time": "3 months",
-            "Peak Probability": "99.9%"
+            "Model First Spike (>5%)": "Jan 1991",
+            "NBER Official Start": "Jul 1990",
+            "Timing": "Confirmed mid-cycle",
+            "Peak Probability": "100.0%"
         },
         {
             "Recession": "2001 (Dot-com bust)",
-            "Model First Alert": "January 2001",
-            "NBER Official Start": "March 2001",
-            "Lead Time": "2 months",
+            "Model First Spike (>5%)": "Jan 2001",
+            "NBER Official Start": "Mar 2001",
+            "Timing": "2 month lead",
             "Peak Probability": "100.0%"
         },
         {
             "Recession": "2007–2009 (GFC)",
-            "Model First Alert": "September 2007",
-            "NBER Official Start": "December 2007",
-            "Lead Time": "3 months",
+            "Model First Spike (>5%)": "Jan 2008",
+            "NBER Official Start": "Dec 2007",
+            "Timing": "1 month lag",
             "Peak Probability": "100.0%"
         },
         {
             "Recession": "2020 (COVID-19)",
-            "Model First Alert": "November 2019",
-            "NBER Official Start": "February 2020",
-            "Lead Time": "3 months",
+            "Model First Spike (>5%)": "Mar 2020",
+            "NBER Official Start": "Feb 2020",
+            "Timing": "1 month lag",
             "Peak Probability": "100.0%"
         },
     ])
@@ -380,9 +374,11 @@ def render_lead_time_table():
     st.markdown("""
         <div style='font-family: monospace; font-size: 11px; color: #4a4a5a;
                     margin-top: 8px; padding-bottom: 8px;'>
-            NBER confirms recessions with a lag of 6&ndash;18 months after the fact.
-            A model that crosses the 10% alert threshold months before official dating
-            provides actionable early warning signal.
+            NBER confirms recessions with a 6&ndash;18 month lag after the fact.
+            This model provides real-time scoring as new FRED data is released,
+            vs. NBER dating which relies on comprehensive historical revision.
+            Note: elevated readings in Mar&ndash;Dec 2020 post-recession and
+            Mar&ndash;Apr 2025 warrant monitoring.
         </div>
     """, unsafe_allow_html=True)
 
