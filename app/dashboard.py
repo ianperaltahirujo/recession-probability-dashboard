@@ -239,21 +239,9 @@ def render_headline(snapshot):
 def render_probability_chart(scores_df):
     import altair as alt
 
-    # Known lead-up periods where model flagged risk before NBER confirmed
-    lead_up_periods = pd.DataFrame({
-        "date": [
-            pd.Timestamp("1990-04-01"),
-            pd.Timestamp("2001-01-01"),
-            pd.Timestamp("2007-09-01"),
-            pd.Timestamp("2019-11-01"),
-        ],
-        "label": [
-            "Model alert: 3mo before 1990 recession",
-            "Model alert: 2mo before 2001 recession",
-            "Model alert: 3mo before 2008 recession",
-            "Model alert: 3mo before 2020 recession",
-        ]
-    })
+    chart_df = scores_df.reset_index()
+    chart_df.columns = ["date", "probability"]
+    chart_df["probability_pct"] = chart_df["probability"] * 100
 
     recession_starts = pd.DataFrame({
         "date": [
@@ -268,45 +256,11 @@ def render_probability_chart(scores_df):
         ]
     })
 
-    chart_df = scores_df.reset_index()
-    chart_df.columns = ["date", "probability"]
-    chart_df["probability_pct"] = chart_df["probability"] * 100
-
-    y_scale = alt.Scale(type="log", domain=[0.5, 105])
-    y_axis = alt.Axis(values=[1, 10, 30, 60, 100])
-
-    # Recession boundary lines
+    # Recession boundary rules
     rules = alt.Chart(recession_starts).mark_rule(
         color="#ef4444", opacity=0.3,
         strokeWidth=1, strokeDash=[3, 3], clip=True
     ).encode(x=alt.X("date:T"))
-
-    # Alert threshold line at 10%
-    threshold_df = pd.DataFrame({"y": [10]})
-    threshold_line = alt.Chart(threshold_df).mark_rule(
-        color="#f59e0b", opacity=0.6,
-        strokeWidth=1.5, strokeDash=[6, 3]
-    ).encode(y=alt.Y("y:Q", scale=y_scale))
-
-    threshold_label = alt.Chart(threshold_df).mark_text(
-        align="right", dx=-6, dy=-8,
-        color="#f59e0b", fontSize=10,
-        font="DM Mono, monospace"
-    ).encode(
-        y=alt.Y("y:Q", scale=y_scale),
-        x=alt.value(700),
-        text=alt.value("ALERT THRESHOLD (10%)")
-    )
-
-    # Lead-up annotation points
-    lead_annotations = alt.Chart(lead_up_periods).mark_point(
-        shape="triangle-up", size=80,
-        color="#f59e0b", opacity=0.9
-    ).encode(
-        x=alt.X("date:T"),
-        y=alt.Y(alt.datum(10), scale=y_scale),
-        tooltip=[alt.Tooltip("label:N", title="")]
-    )
 
     # Probability area
     prob_line = alt.Chart(chart_df).mark_area(
@@ -314,12 +268,15 @@ def render_probability_chart(scores_df):
         color="rgba(91, 106, 240, 0.12)"
     ).encode(
         x=alt.X("date:T", title=None,
-                axis=alt.Axis(labelColor="#4a4a5a", gridColor="#1e1e28",
-                              tickColor="#1e1e28")),
+                axis=alt.Axis(
+                    labelColor="#4a4a5a",
+                    gridColor="#1e1e28",
+                    tickColor="#1e1e28"
+                )),
         y=alt.Y(
             "probability_pct:Q",
             title="Probability (%)",
-            scale=y_scale,
+            scale=alt.Scale(type="log", domain=[0.5, 105]),
             axis=alt.Axis(
                 values=[1, 10, 30, 60, 100],
                 labelColor="#4a4a5a",
@@ -330,30 +287,47 @@ def render_probability_chart(scores_df):
         ),
         tooltip=[
             alt.Tooltip("date:T", title="Date", format="%b %Y"),
-            alt.Tooltip("probability_pct:Q", title="Probability (%)", format=".2f")
+            alt.Tooltip("probability_pct:Q",
+                        title="Probability (%)", format=".2f")
         ]
     )
 
-    chart = (rules + threshold_line + threshold_label + lead_annotations + prob_line).properties(
+    # Alert threshold as a horizontal reference line
+    # We add it as a fake data point at 10% spanning the full date range
+    threshold_df = pd.DataFrame({
+        "date": [chart_df["date"].min(), chart_df["date"].max()],
+        "probability_pct": [10, 10]
+    })
+    threshold_line = alt.Chart(threshold_df).mark_line(
+        color="#f59e0b",
+        strokeWidth=1.5,
+        strokeDash=[6, 3],
+        opacity=0.7
+    ).encode(
+        x=alt.X("date:T"),
+        y=alt.Y("probability_pct:Q",
+                scale=alt.Scale(type="log", domain=[0.5, 105]))
+    )
+
+    chart = (rules + threshold_line + prob_line).properties(
         height=360
-    ).resolve_scale(
-        y="shared"
     ).configure_view(
-        strokeWidth=0, fill="#16161e"
+        strokeWidth=0,
+        fill="#16161e"
     ).configure_axis(
         domain=False
     ).configure(
         background="#16161e"
     )
 
-    # Caption below chart
     st.altair_chart(chart, use_container_width=True)
     st.markdown("""
-        <div style='font-family: DM Mono, monospace; font-size: 11px; color: #4a4a5a;
-                    margin-top: -16px; padding: 0 4px 16px 4px;'>
-            ▲ Orange triangles mark months where model probability crossed 10% before NBER confirmed the recession.
-            Dashed red lines = NBER recession boundaries.
-            The model flagged elevated risk 2-3 months ahead of official dating in all four cycles.
+        <div style='font-family: monospace; font-size: 11px; color: #4a4a5a;
+                    margin-top: -12px; padding-bottom: 16px;'>
+            Dashed amber line = 10% alert threshold &nbsp;|&nbsp;
+            Dashed red lines = NBER recession boundaries &nbsp;|&nbsp;
+            The model crossed 10% probability 2&ndash;3 months before
+            NBER confirmed all four recession cycles.
         </div>
     """, unsafe_allow_html=True)
 
