@@ -537,7 +537,8 @@ def render_feature_importance():
                     axis=alt.Axis(labelColor="#4a4a5a", gridColor="#1e1e28",
                                   tickColor="#1e1e28", titleColor="#4a4a5a")),
             y=alt.Y("Feature:N", sort="-x", title=None,
-                    axis=alt.Axis(labelColor="#ffffff", labelFontSize=12)),
+                    axis=alt.Axis(labelColor="#ffffff", labelFontSize=12,
+                                  labelLimit=200)),
             tooltip=[
                 alt.Tooltip("Feature:N", title="Feature"),
                 alt.Tooltip("Importance:Q", title="Importance", format=".4f")
@@ -601,7 +602,13 @@ def render_current_drivers(features_df):
                 "Indicator": label,
                 "Current Value": current_val,
                 "Z-Score": round(z, 2),
-                "Signal": "🔴 Stress" if z > 1.5 else ("🟡 Elevated" if z > 0.5 else "🟢 Normal")
+                "Signal": "🔴 Stress" if z > 1.5 else (
+                    "🟡 Elevated" if z > 0.5 else (
+                        "🔴 Stress" if (col == "umcsent" and z < -1.5) else (
+                            "🟡 Elevated" if (col == "umcsent" and z < -0.5) else "🟢 Normal"
+                        )
+                    )
+                )
             })
 
     drivers_df = pd.DataFrame(rows).sort_values("Z-Score", ascending=False)
