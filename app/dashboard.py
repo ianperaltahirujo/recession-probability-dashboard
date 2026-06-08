@@ -129,6 +129,25 @@ def load_snapshot():
     with open("data/processed/current_snapshot.json", "r") as f:
         return json.load(f)
 
+def check_data_staleness(snapshot):
+    """
+    Check if the data is stale and show a warning banner
+    if the last update was more than 10 days ago.
+    """
+    try:
+        last_updated = pd.Timestamp(snapshot["last_updated"])
+        days_since = (pd.Timestamp.now() - last_updated).days
+        if days_since > 10:
+            st.warning(
+                f"⚠️ Data was last updated {days_since} days ago "
+                f"({snapshot['last_updated']}). "
+                f"The weekly pipeline may not have run successfully. "
+                f"Scores may not reflect current conditions.",
+                icon=None
+            )
+    except Exception:
+        pass
+
 @st.cache_data(ttl=3600)
 def load_features():
     df = pd.read_csv(
@@ -678,6 +697,7 @@ def render_footer(snapshot):
 run_pipeline_if_needed()
 scores_df = load_scores()
 snapshot = load_snapshot()
+check_data_staleness(snapshot)
 features_df = load_features()
 
 render_header()
