@@ -104,8 +104,8 @@ Industrial Production MoM% (0.09)
 | Feature engineering | `pandas`, `numpy` |
 | Modeling | `scikit-learn` |
 | Experiment tracking | `MLflow` |
-| Orchestration | `Prefect` |
-| Scheduling | GitHub Actions (weekly cron) |
+| Orchestration | `Prefect` (local pipeline dependency management) |
+| Scheduling | GitHub Actions (weekly cron, production scheduler) |
 | Dashboard | `Streamlit`, `Altair` |
 | Deployment | Streamlit Community Cloud |
 | Landing page | GitHub Pages |
