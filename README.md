@@ -182,16 +182,19 @@ streamlit run app/dashboard.py
 The GitHub Actions workflow in `.github/workflows/weekly_pipeline.yml` runs every Monday at 6am UTC. It fetches fresh FRED data, engineers features, scores current conditions against the trained model, and commits the updated files back to the repository. Streamlit Community Cloud picks up the new data automatically.
 
 To trigger manually: go to Actions → Weekly Recession Pipeline → Run workflow.
+> [!NOTE]
+> Prefect manages task dependencies and retry logic during local pipeline runs. GitHub Actions serves as the production scheduler, triggering the pipeline weekly on the hosted environment.
 
 ---
 
 ## Limitations
 
-This project is for educational and portfolio purposes. It is not financial
-advice. NBER recession dating is confirmed with a lag of 6–18 months after
+NBER recession dating is confirmed with a lag of 6–18 months after
 the fact, so near-term model readings should be interpreted with caution.
 The model scores current conditions in real time but cannot account for data
 revisions that NBER applies retrospectively.
+> [!NOTE]
+>This project is for educational and portfolio purposes. It is not financial advice.
 
 ---
 
