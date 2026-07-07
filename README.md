@@ -1,6 +1,6 @@
 # U.S. Recession Probability Dashboard
 
-A production-grade macroeconomic signal built on 7 FRED indicators, gradient boosting with isotonic calibration, MLflow experiment tracking, and an automated Prefect pipeline. Trained on 35 years of data across five recession cycles.
+A macroeconomic signal built on 7 FRED indicators and sigmoid-calibrated gradient boosting. Trained on 35 years of data across four recession cycles, published as a single static page that regenerates itself every week; no server, nothing to keep warm.
 
 **[View Project →](https://ianperaltahirujo.github.io/recession-probability-dashboard/)**
 
@@ -9,17 +9,17 @@ A production-grade macroeconomic signal built on 7 FRED indicators, gradient boo
 ## Overview
 
 This project scores the current probability of a U.S. recession in real time
-using macroeconomic data from the Federal Reserve Economic Data (FRED) API. A `GradientBoostingClassifier` with isotonic calibration is trained on 421
+using macroeconomic data from the Federal Reserve Economic Data (FRED) API. A `GradientBoostingClassifier` with sigmoid calibration is trained on 422
 months of historical data (1990–2026), validated using 5-fold time-series
-cross validation, and deployed as a live Streamlit dashboard that updates
-weekly via GitHub Actions.
+cross validation, and published as a static GitHub Pages site that GitHub
+Actions regenerates from fresh data every Monday.
 
 | Metric | Value |
 |---|---|
-| CV AUC-ROC | 0.9977 |
-| CV Brier Score | 0.0683 |
-| Training data | 421 months (1990–2026) |
-| Recession cycles covered | 5 |
+| CV AUC-ROC | 0.9945 |
+| CV Brier Score | 0.0518 |
+| Training data | 422 months (1990–2026) |
+| Recession cycles covered | 4 |
 | Features engineered | 19 |
 | FRED indicators | 7 |
 
@@ -37,16 +37,16 @@ pipeline/fetch_data.py        ← Pull 7 FRED series, resample to monthly
 pipeline/engineer_features.py ← Build 19 recession-signal features
    │
    ▼
-pipeline/train_model.py       ← Train + calibrate model, log to MLflow
+pipeline/train_model.py       ← Train + calibrate model (manual step, not run weekly)
    │
    ▼
 pipeline/score_current.py     ← Score all months, write scores + snapshot
    │
    ▼
-app/dashboard.py              ← Streamlit dashboard (Streamlit Community Cloud)
+pipeline/generate_site.py     ← Render docs/index.html from fresh data
 ```
 
-The pipeline runs automatically every Monday at 6am UTC via GitHub Actions. No model inference happens at request time, the dashboard reads pre-computed scores from CSV.
+Four stages (fetch, engineer, score, generate) run automatically every Monday at 6am UTC via GitHub Actions, which commits the regenerated `docs/index.html` straight back to the repo for GitHub Pages to serve. No model inference happens at request time, and there's no separate app to deploy or keep warm. Retraining is the only manual step.
 
 ---
 
@@ -82,13 +82,15 @@ The pipeline runs automatically every Monday at 6am UTC via GitHub Actions. No m
 ## Model
 
 A `GradientBoostingClassifier` (200 estimators, learning rate 0.05, max
-depth 3) wrapped with `CalibratedClassifierCV` using isotonic regression.
-Calibration converts raw tree scores into well-calibrated probabilities
-rather than near-binary 0/1 outputs.
+depth 3) wrapped with `CalibratedClassifierCV` using sigmoid calibration
+(Platt scaling). Isotonic calibration was tried first, but it's a step
+function that overfit into ~18 discrete probability buckets on this
+small a calibration set; sigmoid stays calibrated while varying
+continuously.
 
 A logistic regression baseline is also trained and tracked in MLflow for
-comparison. The gradient booster is selected as the best model based on
-CV AUC-ROC.
+comparison (a manual, local step; see `pipeline/train_model.py`). The
+gradient booster is selected as the best model based on CV AUC-ROC.
 
 **Top features by importance:**
 Payrolls MoM (0.39), Sentiment YoY (0.26), Payrolls 3M Avg (0.12),
@@ -103,12 +105,12 @@ Industrial Production MoM% (0.09)
 | Data ingestion | `fredapi`, `pandas` |
 | Feature engineering | `pandas`, `numpy` |
 | Modeling | `scikit-learn` |
-| Experiment tracking | `MLflow` |
-| Orchestration | `Prefect` (local pipeline dependency management) |
-| Scheduling | GitHub Actions (weekly cron, production scheduler) |
-| Dashboard | `Streamlit`, `Altair` |
-| Deployment | Streamlit Community Cloud |
-| Landing page | GitHub Pages |
+| Experiment tracking | `MLflow` (local, manual retraining only) |
+| Local orchestration | `Prefect` (not part of the production path) |
+| Site generation | `Jinja2` |
+| Charting | `Chart.js` (client-side, no backend) |
+| Scheduling & deploy | GitHub Actions (weekly cron regenerates and commits the site) |
+| Hosting | GitHub Pages (single static page) |
 
 ---
 
@@ -118,25 +120,23 @@ Industrial Production MoM% (0.09)
 recession-probability-dashboard/
 ├── .github/workflows/
 │   └── weekly_pipeline.yml     # GitHub Actions weekly scheduler
-├── app/
-│   └── dashboard.py            # Streamlit dashboard
 ├── data/
 │   ├── raw/                    # FRED raw data (auto-updated weekly)
 │   └── processed/              # Feature matrix, scores, snapshot
 ├── docs/
-│   └── index.html              # Landing page (GitHub Pages)
+│   └── index.html              # Generated site (GitHub Pages); do not hand-edit
 ├── models/
 │   ├── best_model.pkl          # Trained model artifact
 │   └── scaler.pkl              # Feature scaler
 ├── pipeline/
 │   ├── fetch_data.py           # FRED API ingestion
 │   ├── engineer_features.py    # Feature engineering
-│   ├── train_model.py          # Model training + MLflow logging
-│   └── score_current.py        # Scoring + snapshot generation
+│   ├── train_model.py          # Model training + MLflow logging (manual)
+│   ├── score_current.py        # Scoring + snapshot generation
+│   ├── generate_site.py        # Renders docs/index.html from real data
+│   └── templates/site.html     # Jinja2 template for the generated site
 ├── flows/
-│   └── weekly_flow.py          # Prefect orchestration flow
-├── .streamlit/
-│   └── config.toml             # Streamlit theme config
+│   └── weekly_flow.py          # Prefect orchestration flow (local only)
 ├── requirements.txt
 └── README.md
 ```
@@ -166,24 +166,27 @@ FRED_API_KEY=your_key_here
 ```bash
 python -m pipeline.fetch_data
 python -m pipeline.engineer_features
-python -m pipeline.train_model
+python -m pipeline.train_model      # optional, manual retrain only
 python -m pipeline.score_current
+python -m pipeline.generate_site
 ```
 
-**4. Launch the dashboard**
-```bash
-streamlit run app/dashboard.py
-```
+**4. Open the generated page**
+
+`docs/index.html` is a plain static file. Open it directly in a browser,
+or serve the folder locally (`python -m http.server` from `docs/`) if you
+want the client-side chart's zoom controls to behave exactly as they do
+on GitHub Pages.
 
 ---
 
 ## Automated Weekly Updates
 
-The GitHub Actions workflow in `.github/workflows/weekly_pipeline.yml` runs every Monday at 6am UTC. It fetches fresh FRED data, engineers features, scores current conditions against the trained model, and commits the updated files back to the repository. Streamlit Community Cloud picks up the new data automatically.
+The GitHub Actions workflow in `.github/workflows/weekly_pipeline.yml` runs every Monday at 6am UTC. It fetches fresh FRED data, engineers features, scores current conditions against the committed model, regenerates `docs/index.html` from that fresh data, and commits everything back to the repository. GitHub Pages picks up the new page automatically; there's no separate app to redeploy.
 
 To trigger manually: go to Actions → Weekly Recession Pipeline → Run workflow.
 > [!NOTE]
-> Prefect manages task dependencies and retry logic during local pipeline runs. GitHub Actions serves as the production scheduler, triggering the pipeline weekly on the hosted environment.
+> Prefect manages task dependencies and retry logic during local pipeline runs only (`flows/weekly_flow.py`). GitHub Actions does not use Prefect; it calls each pipeline module directly. Retraining (`pipeline/train_model.py`) is never run by the weekly workflow; it's a deliberate manual step whose output (`models/*.pkl`) must be committed by hand.
 
 ---
 

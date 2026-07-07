@@ -84,7 +84,12 @@ def train_and_log(X, y):
                 subsample=0.8,
                 random_state=42
             ),
-            method="isotonic",
+            # Sigmoid (Platt scaling), not isotonic: isotonic is a step
+            # function and only works well with a large calibration set.
+            # With ~31 recession months out of 421, isotonic collapsed
+            # into ~18 discrete probability buckets instead of a smooth
+            # curve. Sigmoid stays calibrated but varies continuously.
+            method="sigmoid",
             cv=3
         )
     
