@@ -4,6 +4,8 @@ A macroeconomic signal built on 7 FRED indicators and sigmoid-calibrated gradien
 
 **[View Project →](https://ianperaltahirujo.github.io/recession-probability-dashboard/)**
 
+[![Site preview](assets/site-preview.png)](https://ianperaltahirujo.github.io/recession-probability-dashboard/)
+
 ---
 
 ## Overview

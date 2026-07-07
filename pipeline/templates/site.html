@@ -17,7 +17,7 @@
     --paper-raised: #F6F4EC;
     --ink: #15181F;
     --ink-dim: #5B5F6B;
-    --ink-faint: #9A9DA8;
+    --ink-faint: #7B7E8A;
     --hairline: rgba(21,24,31,0.16);
     --hairline-soft: rgba(21,24,31,0.09);
     --red: #A6362B;
@@ -29,8 +29,33 @@
     --font-mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, Menlo, monospace;
   }
 
+  /* Night ledger: ink and paper swap roles rather than simply inverting,
+     so text stays warm off-white instead of stark white-on-black. */
+  :root[data-theme="dark"] {
+    --paper: #14161C;
+    --paper-raised: #1B1E26;
+    --ink: #EDEAE0;
+    --ink-dim: #9A9DA8;
+    --ink-faint: #63666F;
+    --hairline: rgba(237,234,224,0.14);
+    --hairline-soft: rgba(237,234,224,0.08);
+    --red: #E0574A;
+    --red-deep: #8B2E23;
+    --amber: #D6A82E;
+  }
+
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
+  html { scrollbar-width: thin; scrollbar-color: var(--hairline) var(--paper); }
+  ::-webkit-scrollbar { width: 11px; height: 11px; }
+  ::-webkit-scrollbar-track { background: var(--paper); }
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--ink-faint);
+    background-clip: padding-box;
+    border: 3px solid var(--paper);
+  }
+  ::-webkit-scrollbar-thumb:hover { background-color: var(--ink-dim); }
+  ::-webkit-scrollbar-corner { background: var(--paper); }
 
   body {
     background: var(--paper);
@@ -39,6 +64,7 @@
     margin: 0;
     -webkit-font-smoothing: antialiased;
     line-height: 1.6;
+    transition: background-color 200ms ease-out, color 200ms ease-out;
   }
 
   .sr-only {
@@ -77,6 +103,19 @@
   .nav-links { display: flex; gap: 20px; align-items: center; }
   .nav-links a { text-decoration: none; color: var(--ink-dim); }
   .nav-links a:hover { color: var(--ink); }
+
+  .theme-toggle {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; padding: 0;
+    background: transparent; color: var(--ink-dim);
+    border: 1px solid var(--hairline);
+    cursor: pointer;
+    transition: color 150ms ease-out, border-color 150ms ease-out;
+  }
+  .theme-toggle:hover { color: var(--ink); border-color: var(--ink-dim); }
+  .theme-toggle .icon-sun { display: none; }
+  :root[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+  :root[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
 
   .hero { padding: clamp(28px, 6vw, 56px) 0 8px; }
   .eyebrow {
@@ -233,6 +272,13 @@
 </style>
 </head>
 <body>
+<script>
+  (function () {
+    var stored = localStorage.getItem('theme');
+    var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  })();
+</script>
 
 <a class="skip-link" href="#main">Skip to content</a>
 
@@ -243,6 +289,10 @@
       <a href="#reading">Reading</a>
       <a href="#build">How it's built</a>
       <a href="https://github.com/ianperaltahirujo/recession-probability-dashboard" target="_blank" rel="noopener">GitHub &#8599;</a>
+      <button type="button" class="theme-toggle" id="themeToggle" aria-label="Switch to dark mode">
+        <svg class="icon-moon" width="16" height="16" viewBox="0 0 18 18" fill="none"><path d="M15 10.5A6 6 0 1 1 7.5 3a4.7 4.7 0 0 0 7.5 7.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+        <svg class="icon-sun" width="16" height="16" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="4" stroke="currentColor" stroke-width="1.3"/><path d="M9 1v2M9 15v2M1 9h2M15 9h2M3.5 3.5l1.4 1.4M13.1 13.1l1.4 1.4M3.5 14.5l1.4-1.4M13.1 4.9l1.4-1.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      </button>
     </div>
   </div>
 </nav>
@@ -444,6 +494,20 @@
     nav.classList.toggle('scrolled', window.scrollY > 40);
   });
 
+  var themeToggle = document.getElementById('themeToggle');
+  function updateThemeLabel() {
+    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    themeToggle.setAttribute('aria-label', isDark ? 'Switch to light mode' : 'Switch to dark mode');
+  }
+  updateThemeLabel();
+  themeToggle.addEventListener('click', function () {
+    var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+    updateThemeLabel();
+    retheme();
+  });
+
   var backToTop = document.getElementById('backToTop');
   window.addEventListener('scroll', function () {
     backToTop.classList.toggle('show', window.scrollY > 800);
@@ -464,9 +528,36 @@
   var chartData = {{ chart_data_json }};
   var recessionRanges = {{ recession_ranges_json }};
 
-  function inRecession(label) {
-    return recessionRanges.some(function (r) { return label >= r[0] && label <= r[1]; });
+  // Chart colors are read from the live CSS custom properties (not
+  // hardcoded) so the chart re-themes correctly when dark mode toggles.
+  function hexToRgbStr(hex) {
+    hex = hex.trim().replace('#', '');
+    var r = parseInt(hex.substring(0, 2), 16);
+    var g = parseInt(hex.substring(2, 4), 16);
+    var b = parseInt(hex.substring(4, 6), 16);
+    return r + ',' + g + ',' + b;
   }
+  function readThemeColors() {
+    var s = getComputedStyle(document.documentElement);
+    var inkRgb = hexToRgbStr(s.getPropertyValue('--ink').trim());
+    var redRgb = hexToRgbStr(s.getPropertyValue('--red').trim());
+    return {
+      ink: s.getPropertyValue('--ink').trim(),
+      inkDim: s.getPropertyValue('--ink-dim').trim(),
+      inkFaint: s.getPropertyValue('--ink-faint').trim(),
+      paperRaised: s.getPropertyValue('--paper-raised').trim(),
+      hairline: s.getPropertyValue('--hairline').trim(),
+      amber: s.getPropertyValue('--amber').trim(),
+      inkGridLine: 'rgba(' + inkRgb + ',0.06)',
+      inkFillTop: 'rgba(' + inkRgb + ',0.18)',
+      inkFillBottom: 'rgba(' + inkRgb + ',0.01)',
+      zoomDragBg: 'rgba(' + inkRgb + ',0.08)',
+      bandFill: 'rgba(' + redRgb + ',0.16)',
+      bandStroke: 'rgba(' + redRgb + ',0.45)'
+    };
+  }
+
+  var theme = readThemeColors();
 
   var recessionPlugin = {
     id: 'recessionBands',
@@ -480,9 +571,9 @@
         if (si < 0 || ei < 0) return;
         var x0 = x.getPixelForValue(si);
         var x1 = x.getPixelForValue(ei);
-        ctx.fillStyle = 'rgba(166,54,43,0.16)';
+        ctx.fillStyle = theme.bandFill;
         ctx.fillRect(x0, area.top, x1 - x0, area.bottom - area.top);
-        ctx.strokeStyle = 'rgba(166,54,43,0.45)';
+        ctx.strokeStyle = theme.bandStroke;
         ctx.lineWidth = 1;
         ctx.setLineDash([3, 3]);
         ctx.beginPath(); ctx.moveTo(x0, area.top); ctx.lineTo(x0, area.bottom); ctx.stroke();
@@ -499,12 +590,12 @@
       var ctx = chart.ctx, area = chart.chartArea, y = chart.scales.y;
       var yPos = y.getPixelForValue(10);
       ctx.save();
-      ctx.strokeStyle = '#6B5012';
+      ctx.strokeStyle = theme.amber;
       ctx.setLineDash([5, 4]);
       ctx.lineWidth = 1.2;
       ctx.beginPath(); ctx.moveTo(area.left, yPos); ctx.lineTo(area.right, yPos); ctx.stroke();
       ctx.setLineDash([]);
-      ctx.fillStyle = '#6B5012';
+      ctx.fillStyle = theme.amber;
       ctx.font = '10.5px IBM Plex Mono, monospace';
       ctx.fillText('10% alert threshold', area.left + 4, yPos - 5);
       ctx.restore();
@@ -515,9 +606,13 @@
 
   var canvasEl = document.getElementById('probChart');
   var ctx = canvasEl.getContext('2d');
-  var grad = ctx.createLinearGradient(0, 0, 0, 300);
-  grad.addColorStop(0, 'rgba(21,24,31,0.18)');
-  grad.addColorStop(1, 'rgba(21,24,31,0.01)');
+
+  function buildGradient() {
+    var g = ctx.createLinearGradient(0, 0, 0, 300);
+    g.addColorStop(0, theme.inkFillTop);
+    g.addColorStop(1, theme.inkFillBottom);
+    return g;
+  }
 
   var chart = new Chart(ctx, {
     type: 'line',
@@ -525,13 +620,13 @@
       labels: chartLabels,
       datasets: [{
         data: chartData,
-        borderColor: '#15181F',
+        borderColor: theme.ink,
         borderWidth: 1.5,
-        backgroundColor: grad,
+        backgroundColor: buildGradient(),
         fill: true,
         pointRadius: 0,
         pointHoverRadius: 4,
-        pointHoverBackgroundColor: '#15181F',
+        pointHoverBackgroundColor: theme.ink,
         tension: 0.25,
       }]
     },
@@ -542,11 +637,11 @@
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: '#F6F4EC',
-          borderColor: 'rgba(21,24,31,0.16)',
+          backgroundColor: theme.paperRaised,
+          borderColor: theme.hairline,
           borderWidth: 1,
-          titleColor: '#15181F',
-          bodyColor: '#5B5F6B',
+          titleColor: theme.ink,
+          bodyColor: theme.inkDim,
           titleFont: { family: 'IBM Plex Mono', size: 11 },
           bodyFont: { family: 'IBM Plex Mono', size: 11 },
           padding: 10,
@@ -561,23 +656,23 @@
           zoom: {
             wheel: { enabled: true },
             pinch: { enabled: true },
-            drag: { enabled: true, backgroundColor: 'rgba(21,24,31,0.08)' },
+            drag: { enabled: true, backgroundColor: theme.zoomDragBg },
             mode: 'x'
           }
         }
       },
       scales: {
         x: {
-          grid: { color: 'rgba(21,24,31,0.06)' },
-          ticks: { color: '#9A9DA8', font: { family: 'IBM Plex Mono', size: 10 }, autoSkip: true, autoSkipPadding: 24, maxRotation: 0 },
+          grid: { color: theme.inkGridLine },
+          ticks: { color: theme.inkFaint, font: { family: 'IBM Plex Mono', size: 10 }, autoSkip: true, autoSkipPadding: 24, maxRotation: 0 },
           border: { display: false }
         },
         y: {
           type: 'logarithmic',
           min: 1, max: 100,
-          grid: { color: 'rgba(21,24,31,0.06)' },
+          grid: { color: theme.inkGridLine },
           ticks: {
-            color: '#9A9DA8',
+            color: theme.inkFaint,
             font: { family: 'IBM Plex Mono', size: 10 },
             callback: function (v) {
               var shown = [1, 2, 5, 10, 20, 50, 100];
@@ -593,6 +688,25 @@
   document.getElementById('resetZoom').addEventListener('click', function () {
     chart.resetZoom();
   });
+
+  function retheme() {
+    theme = readThemeColors();
+    var d = chart.data.datasets[0];
+    d.borderColor = theme.ink;
+    d.pointHoverBackgroundColor = theme.ink;
+    d.backgroundColor = buildGradient();
+    var t = chart.options.plugins.tooltip;
+    t.backgroundColor = theme.paperRaised;
+    t.borderColor = theme.hairline;
+    t.titleColor = theme.ink;
+    t.bodyColor = theme.inkDim;
+    chart.options.plugins.zoom.zoom.drag.backgroundColor = theme.zoomDragBg;
+    chart.options.scales.x.grid.color = theme.inkGridLine;
+    chart.options.scales.x.ticks.color = theme.inkFaint;
+    chart.options.scales.y.grid.color = theme.inkGridLine;
+    chart.options.scales.y.ticks.color = theme.inkFaint;
+    chart.update();
+  }
 </script>
 </body>
 </html>
