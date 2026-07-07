@@ -45,6 +45,8 @@
   }
 
   * { box-sizing: border-box; }
+  html { overflow-x: hidden; }
+  body { max-width: 100%; }
   html { scroll-behavior: smooth; }
   html { scrollbar-width: thin; scrollbar-color: var(--hairline) var(--paper); }
   ::-webkit-scrollbar { width: 11px; height: 11px; }
@@ -148,7 +150,7 @@
 
   .barcode-wrap { position: relative; border-top: 1px solid var(--hairline); border-bottom: 1px solid var(--hairline); padding: 18px 0 10px; margin-bottom: 8px; }
   .barcode { display: flex; align-items: flex-end; height: 46px; gap: 1px; }
-  .bar { flex: 1 1 0; background: var(--ink); opacity: 0.32; height: 30%; min-width: 1px; transform-origin: bottom; animation: rise 900ms cubic-bezier(.2,.7,.3,1) both; }
+  .bar { flex: 1 1 0; background: var(--ink); opacity: 0.32; height: 30%; min-width: 0; transform-origin: bottom; animation: rise 900ms cubic-bezier(.2,.7,.3,1) both; }
   .bar.recession { background: var(--red); opacity: 0.85; height: 100%; }
   .bar.current { background: var(--ink); opacity: 1; height: 70%; }
   @keyframes rise { from { transform: scaleY(0); } to { transform: scaleY(1); } }
@@ -260,6 +262,11 @@
     .feature-grid { grid-template-columns: repeat(2, 1fr); }
   }
   @media (max-width: 720px) {
+    /* At ~400+ bars, a 1px gap between each one alone exceeds a phone's
+       content width, which forces every bar to shrink to 0 to make room
+       for the gaps. Below this width individual gaps aren't perceptible
+       anyway, so drop them and let the bars render edge to edge. */
+    .barcode { gap: 0; }
     .nav-links { gap: 12px; font-size: 12px; }
     .nav-links a { display: inline-flex; align-items: center; min-height: 44px; }
     .ledger-entry { grid-template-columns: 1fr; }
@@ -268,6 +275,14 @@
     .pipeline-step { grid-template-columns: 32px 1fr; }
     .pipeline-step .tag { grid-column: 2; margin-top: 6px; }
     .back-to-top { right: 14px; bottom: 14px; }
+  }
+
+  /* Below ~480px there isn't room for two anchor-jump links plus GitHub
+     plus the theme toggle without crowding. The hero's own "See today's
+     reading" button already covers the #reading jump, so hiding these
+     is a decluttering, not a loss of functionality. */
+  @media (max-width: 480px) {
+    .nav-links a[href="#reading"], .nav-links a[href="#build"] { display: none; }
   }
 </style>
 </head>
