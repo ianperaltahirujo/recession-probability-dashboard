@@ -451,15 +451,15 @@
     </div>
 
     <div class="footnote-block reveal">
-      <div><sup>1</sup><b>Model.</b> Gradient Boosting Classifier, isotonic calibration via CalibratedClassifierCV. 5-fold expanding time-series cross validation, never shuffled.</div>
+      <div><sup>1</sup><b>Model.</b> Gradient Boosting Classifier, sigmoid calibration via CalibratedClassifierCV. 5-fold expanding time-series cross validation, never shuffled.</div>
       <div><sup>2</sup><b>Limitations.</b> NBER confirms recessions 6&ndash;18 months after the fact. Educational and portfolio use only, not financial advice.</div>
     </div>
   </section>
 
   <section>
     <p class="section-label" style="margin-top:56px;">What's inside</p>
-    <h2 class="section-heading reveal">Built like a real pipeline, not a demo</h2>
-    <p class="section-sub reveal">Every layer is a real, separately runnable module not one script that does everything.</p>
+    <h2 class="section-heading reveal">Modular design with independent stages</h2>
+    <p class="section-sub reveal">Five stages run in sequence: each one takes an input, produces a well-defined output, and can be debugged or retrained in isolation.</p>
 
     <div class="feature-grid reveal">
       <div class="feature-card">
@@ -477,13 +477,13 @@
       <div class="feature-card">
         <div class="feature-icon"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2L2 6v6l7 4 7-4V6L9 2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg></div>
         <div class="feature-title">Calibrated Gradient Boosting</div>
-        <div class="feature-desc">Isotonic calibration via CalibratedClassifierCV for well-calibrated probabilities, not near-binary scores. CV AUC-ROC 0.9945.</div>
+        <div class="feature-desc">Sigmoid calibration via CalibratedClassifierCV produces smooth probability estimates across the 0–100% range rather than clustering near 0 or 1. CV AUC-ROC 0.9945.</div>
         <div class="feature-tag">gradient boosting</div>
       </div>
       <div class="feature-card">
         <div class="feature-icon"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="1.5" y="4.5" width="15" height="11" rx="1" stroke="currentColor" stroke-width="1.3"/><path d="M5 9h8M5 12h5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></div>
         <div class="feature-title">MLflow Experiment Tracking</div>
-        <div class="feature-desc">Every training run logs hyperparameters and CV metrics against a logistic regression baseline for real comparison.</div>
+        <div class="feature-desc">Every training run logs hyperparameters and CV metrics against a logistic regression baseline to track which approach performs better.</div>
         <div class="feature-tag">mlflow</div>
       </div>
       <div class="feature-card">
